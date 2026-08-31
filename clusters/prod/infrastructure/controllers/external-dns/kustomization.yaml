@@ -5,6 +5,4 @@ resources:
   - namespace.yaml
   - repository.yaml
   - release.yaml
-  # Uncomment once the SOPS-encrypted secret exists (see
-  # cloudflare-api-token-secret.sops.yaml.example):
-  # - cloudflare-api-token-secret.sops.yaml
+  - cloudflare-api-token-secret.sops.yaml

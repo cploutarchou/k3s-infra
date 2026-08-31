@@ -1,0 +1,5 @@
+---
+# SOPS-encrypted files are machine-generated ciphertext; yaml formatting
+# rules don't apply to them.
+exclude_paths:
+  - vault/r2-credentials.sops.yml
