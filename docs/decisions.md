@@ -31,11 +31,12 @@ Short log of choices that aren't obvious from the manifests.
   address and external-dns generates no endpoints for them;
   `--default-targets` never kicks in. Every public ingress carries
   `external-dns.alpha.kubernetes.io/target: <the three node IPs>`.
-- **Apex and www DNS are operator-owned** — cpdevlab.com (A, unproxied →
-  k3s-01) and www (CNAME) existed before external-dns; with `policy: sync`
-  and txt ownership it correctly refuses to seize them. Migrating them to
-  external-dns means deleting the manual records so it can recreate them
-  proxied with all three targets — an operator decision, not automated.
+- **Apex and www DNS migrated to external-dns (2026-08-31)** — the
+  pre-existing manual records (apex A, unproxied → 159.195.82.201; www
+  CNAME → apex) were deleted on operator instruction; both names now ride
+  the Uptime Kuma ingress and external-dns publishes them proxied across
+  all three nodes. Restoring the old state means recreating those two
+  records by hand and removing the hosts from the kuma ingress.
 - **external-dns default-targets = node public IPs** — Traefik has no
   LoadBalancer status to publish; explicit targets keep records correct.
 - **R2 EU endpoint** — bucket jurisdiction is EU, so the S3 endpoint is
