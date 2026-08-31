@@ -18,6 +18,8 @@ spec:
         selector:
           dnsZones:
             - cpdevlab.com
+            - christosploutarchou.com
+            - cploutarchou.com
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -38,3 +40,5 @@ spec:
         selector:
           dnsZones:
             - cpdevlab.com
+            - christosploutarchou.com
+            - cploutarchou.com
