@@ -1,0 +1,9 @@
+---
+# PLACEHOLDER — `flux bootstrap github --owner=cploutarchou --repository=k3s-infra
+# --branch=master --path=clusters/prod` replaces this file with the full
+# Flux controller manifests. Until then it only carries the namespace so the
+# kustomization builds.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-system

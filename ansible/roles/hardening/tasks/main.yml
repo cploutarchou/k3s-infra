@@ -1,0 +1,91 @@
+---
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - nftables
+      - unattended-upgrades
+      - apt-listchanges
+      - open-iscsi
+      - nfs-common
+      - chrony
+      - vim-tiny
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable unattended security upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"
+  when: unattended_upgrades
+
+- name: Harden sshd (key-only auth)
+  ansible.builtin.template:
+    src: sshd_hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/50-hardening.conf
+    mode: "0600"
+    validate: sshd -t -f %s
+  notify: Restart sshd
+
+- name: Kernel modules required by k3s
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k3s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: "0644"
+
+- name: Load kernel modules now
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - overlay
+    - br_netfilter
+
+- name: Kubernetes sysctl settings
+  ansible.builtin.template:
+    src: sysctl-k8s.conf.j2
+    dest: /etc/sysctl.d/90-k3s.conf
+    mode: "0644"
+  notify: Reload sysctl
+
+- name: Disable swap now
+  ansible.builtin.command: swapoff -a
+  when: ansible_swaptotal_mb | int > 0
+  changed_when: ansible_swaptotal_mb | int > 0
+
+- name: Remove swap entries from fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#\s]+\s+\S+\s+swap\s.*)$'
+    replace: '# \1'
+
+# Debian 13 mounts /tmp as tmpfs (RAM-backed, size-limited). k3s/containerd
+# state lives under /var/lib/rancher (NVMe), but anything that honours
+# TMPDIR (image imports, etcd snapshot staging) must not land in tmpfs.
+- name: Ensure tmp.mount override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/tmp.mount.d
+    state: directory
+    mode: "0755"
+
+- name: Cap /tmp tmpfs size so it cannot eat workload RAM
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/tmp.mount.d/override.conf
+    content: |
+      [Mount]
+      Options=mode=1777,strictatime,nosuid,nodev,size=1G
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Provide a disk-backed TMPDIR for k3s
+  ansible.builtin.file:
+    path: /var/lib/rancher/tmp
+    state: directory
+    mode: "0750"

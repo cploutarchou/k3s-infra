@@ -1,0 +1,62 @@
+---
+# DaemonSet with hostPorts 80/443: every node terminates ingress on its
+# public IP (Cloudflare proxies in front). The bundled k3s Traefik and
+# servicelb are disabled in the k3s config.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: traefik
+      version: "34.4.1"
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+  values:
+    deployment:
+      kind: DaemonSet
+    service:
+      enabled: true
+      type: ClusterIP
+    ports:
+      web:
+        hostPort: 80
+        redirections:
+          entryPoint:
+            to: websecure
+            scheme: https
+            permanent: true
+      websecure:
+        hostPort: 443
+        tls:
+          enabled: true
+    ingressClass:
+      enabled: true
+      isDefaultClass: true
+    providers:
+      kubernetesIngress:
+        publishedService:
+          enabled: false
+    securityContext:
+      capabilities:
+        drop: [ALL]
+        add: [NET_BIND_SERVICE]
+      runAsNonRoot: false
+      runAsUser: 0
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+    readinessProbe:
+      failureThreshold: 1
+      initialDelaySeconds: 2
+      periodSeconds: 10
+    logs:
+      general:
+        level: INFO

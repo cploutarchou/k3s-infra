@@ -1,0 +1,39 @@
+image:
+  repository: ghcr.io/cploutarchou/k3s-infra-mcp
+  # Pin by digest before deploying (repo convention — never :latest):
+  #   docker buildx imagetools inspect ghcr.io/cploutarchou/k3s-infra-mcp:<tag>
+  digest: "" # e.g. sha256:abc123...
+  tag: "0.1.0" # used only if digest is empty; CI should always set digest
+
+replicaCount: 1
+
+listenAddr: ":8080"
+
+# Existing Secret holding MCP_API_KEY (and optionally GITHUB_TOKEN).
+# Create it via SOPS in clusters/prod/apps/mcp/ — never plain in git.
+existingSecret: mcp-server
+
+github:
+  owner: cploutarchou
+  repo: k3s-infra
+
+service:
+  port: 8080
+
+ingress:
+  enabled: true
+  host: mcp.cpdevlab.com
+  className: traefik
+  clusterIssuer: letsencrypt-prod
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Grants get/list/watch on core resources + Flux/CNPG CRs, plus patch on
+# Flux Kustomizations/HelmReleases (reconcile annotation only path).
+rbac:
+  create: true

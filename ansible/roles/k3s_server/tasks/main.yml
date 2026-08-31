@@ -1,0 +1,79 @@
+---
+- name: Assert vLAN is up before installing k3s
+  ansible.builtin.command: ip -4 -o addr show dev {{ vlan_iface }}
+  register: k3s_server_vlan_check
+  changed_when: false
+  failed_when: vlan_ip not in k3s_server_vlan_check.stdout
+
+- name: Warn if R2 credentials are absent (snapshots stay local-only)
+  ansible.builtin.debug:
+    msg: >-
+      r2_access_key_id is empty — etcd snapshots will be taken on schedule
+      but NOT uploaded to R2. Provide ansible/vault/r2-credentials.sops.yml
+      (see ansible/vault/README.md) and re-run.
+  when: r2_access_key_id | length == 0
+
+- name: Create k3s config directory
+  ansible.builtin.file:
+    path: "{{ k3s_server_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Read cluster token from first server (join case)
+  ansible.builtin.slurp:
+    src: "{{ k3s_server_data_dir }}/server/token"
+  delegate_to: "{{ k3s_first_server }}"
+  register: k3s_server_token_slurp
+  when: inventory_hostname != k3s_first_server
+
+- name: Render k3s config.yaml
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ k3s_server_config_dir }}/config.yaml"
+    mode: "0600"
+  notify: Restart k3s
+
+# TMPDIR must not point at tmpfs /tmp (Debian 13): large image pulls and
+# snapshot staging would otherwise land in RAM.
+- name: Ensure k3s service env directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/k3s.service.d
+    state: directory
+    mode: "0755"
+
+- name: Point k3s TMPDIR at NVMe-backed directory
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s.service.d/10-tmpdir.conf
+    content: |
+      [Service]
+      Environment=TMPDIR=/var/lib/rancher/tmp
+    mode: "0644"
+  notify: Restart k3s
+
+- name: Download k3s installer
+  ansible.builtin.get_url:
+    url: "{{ k3s_server_install_url }}"
+    dest: /usr/local/bin/k3s-install.sh
+    mode: "0755"
+
+- name: Install k3s server (config comes from config.yaml)
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_SKIP_START: "false"
+  args:
+    creates: /usr/local/bin/k3s
+  register: k3s_server_install
+
+- name: Flush handlers so config changes apply before the wait
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for node to become Ready
+  ansible.builtin.command: >-
+    k3s kubectl wait --for=condition=Ready
+    node/{{ inventory_hostname }} --timeout=300s
+  changed_when: false
+  retries: 5
+  delay: 15
+  register: k3s_server_node_ready
+  until: k3s_server_node_ready.rc == 0

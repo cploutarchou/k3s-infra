@@ -1,0 +1,22 @@
+# Local state / secrets — never commit
+*.key
+*.pem
+age.agekey
+kubeconfig*
+!scripts/kubeconfig*
+.env
+*.dec.yaml
+*.plain.yaml
+
+# Go
+mcp/bin/
+mcp/dist/
+
+# Ansible
+ansible/*.retry
+ansible/.cache/
+
+# Editors
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,4 @@
+---
+- name: Restart vlan interface
+  ansible.builtin.shell: ifdown {{ vlan_iface }} 2>/dev/null; ifup {{ vlan_iface }}
+  changed_when: true

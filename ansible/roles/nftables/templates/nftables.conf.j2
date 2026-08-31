@@ -1,0 +1,38 @@
+#!/usr/sbin/nft -f
+# Managed by ansible (roles/nftables).
+# Policy: public interface exposes only SSH/HTTP/HTTPS; everything is open
+# on the vLAN ({{ vlan_cidr }}) — k3s API, etcd, flannel VXLAN, kubelet,
+# kube-vip all ride eth1. INPUT-only filtering; kube-proxy/flannel manage
+# their own forwarding chains, so forward stays accept.
+
+flush ruleset
+
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+
+    ct state established,related accept
+    ct state invalid drop
+    iif lo accept
+
+    # ICMP/ICMPv6 (path MTU, netcup monitoring, neighbour discovery)
+    ip protocol icmp accept
+    meta l4proto ipv6-icmp accept
+
+    # Cluster vLAN: trust everything from cluster peers on eth1
+    iifname "{{ vlan_iface }}" ip saddr {{ vlan_cidr }} accept
+
+    # Public: SSH, HTTP, HTTPS only
+    tcp dport 22 accept
+    tcp dport { 80, 443 } accept
+  }
+
+  chain forward {
+    type filter hook forward priority 0; policy accept;
+    # CNI (flannel) and kube-proxy insert their own rules; do not filter here.
+  }
+
+  chain output {
+    type filter hook output priority 0; policy accept;
+  }
+}

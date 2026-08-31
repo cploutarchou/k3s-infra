@@ -1,0 +1,44 @@
+# Managed by ansible (roles/k3s_server). /etc/rancher/k3s/config.yaml
+{% if inventory_hostname == k3s_first_server %}
+cluster-init: true
+{% else %}
+server: https://{{ k3s_first_server_ip }}:6443
+token: "{{ (k3s_server_token_slurp.content | b64decode).strip() }}"
+{% endif %}
+
+# All cluster traffic on the netcup vLAN
+node-ip: {{ vlan_ip }}
+flannel-iface: {{ vlan_iface }}
+advertise-address: {{ vlan_ip }}
+
+tls-san:
+  - {{ k3s_api_vip }}
+{% for host in groups['k3s_cluster'] %}
+  - {{ hostvars[host].vlan_ip }}
+  - {{ hostvars[host].ansible_host }}
+{% endfor %}
+
+# Traefik ships via Flux (DaemonSet), not the bundled chart; kube-vip
+# replaces the bundled klipper LB for the control-plane VIP.
+disable:
+  - traefik
+  - servicelb
+
+# Embedded etcd snapshots -> Cloudflare R2 (EU jurisdiction)
+etcd-snapshot-schedule-cron: "{{ etcd_snapshot_cron }}"
+etcd-snapshot-retention: {{ etcd_snapshot_retention }}
+{% if r2_access_key_id | length > 0 %}
+etcd-s3: true
+etcd-s3-endpoint: "{{ r2_endpoint }}"
+etcd-s3-bucket: "{{ r2_bucket }}"
+etcd-s3-region: "{{ r2_region }}"
+etcd-s3-folder: "etcd/{{ inventory_hostname }}"
+etcd-s3-access-key: "{{ r2_access_key_id }}"
+etcd-s3-secret-key: "{{ r2_secret_access_key }}"
+{% endif %}
+
+kubelet-arg:
+  - "system-reserved=cpu=250m,memory=512Mi"
+  - "kube-reserved=cpu=250m,memory=512Mi"
+
+secrets-encryption: true
