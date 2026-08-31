@@ -1,0 +1,29 @@
+---
+# One-shot seed of the website database. prisma/seed.ts is idempotent
+# (upserts by fixed ids), so a re-run is safe. The Job is kept in git as a
+# record of the bootstrap; delete it once content is managed through the
+# admin CMS. Bump the suffix to re-run — a completed Job is immutable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: website-seed-1
+  namespace: website
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: ghcr.io/cploutarchou/personal-website-seed:0.2.3@sha256:436cc992835f8ffb4f4d6cd3dd6951dad10cccc4cf90917a8ad1f24f554ac290
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: website
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
