@@ -6,6 +6,9 @@ metadata:
   namespace: whoami
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Traefik runs with publishedService disabled (hostPorts), so ingresses
+    # carry no status address; external-dns needs explicit targets.
+    external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"
 spec:
   ingressClassName: traefik
   tls:
