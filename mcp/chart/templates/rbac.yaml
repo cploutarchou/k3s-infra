@@ -30,8 +30,10 @@ rules:
   - apiGroups: ["helm.toolkit.fluxcd.io"]
     resources: ["helmreleases"]
     verbs: ["get", "list", "watch", "patch"]
-  # /healthz/etcd via the apiserver raw path needs no extra RBAC beyond
-  # authenticated access (system:discovery); nothing to add here.
+  # ha_report probes the apiserver health endpoint; non-resource URLs need
+  # an explicit grant (plain authenticated SAs get 403 on /healthz/*).
+  - nonResourceURLs: ["/healthz", "/healthz/*"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
