@@ -6,7 +6,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: website-seed-1
+  name: website-seed-2
   namespace: website
 spec:
   backoffLimit: 2
@@ -16,7 +16,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: seed
-          image: ghcr.io/cploutarchou/personal-website-seed:0.2.3@sha256:436cc992835f8ffb4f4d6cd3dd6951dad10cccc4cf90917a8ad1f24f554ac290
+          image: ghcr.io/cploutarchou/personal-website-seed:0.2.4@sha256:64d84855f10ff1373a020bf73a34b2d7075644a848eda8f06a42056df5ccb121
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
