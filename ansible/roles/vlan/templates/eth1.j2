@@ -1,0 +1,5 @@
+# Managed by ansible (roles/vlan). netcup cloud vLAN, cluster-internal.
+auto {{ vlan_iface }}
+iface {{ vlan_iface }} inet static
+    address {{ vlan_ip }}/{{ vlan_prefix }}
+    mtu {{ vlan_mtu }}

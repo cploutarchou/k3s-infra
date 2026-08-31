@@ -1,0 +1,44 @@
+---
+# Publishes ingress hostnames to Cloudflare (proxied). Traefik has no
+# LoadBalancer IP (hostPorts), so records default to the three node public
+# IPs via --default-targets.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: external-dns
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: external-dns
+      version: "1.16.1"
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+  values:
+    provider:
+      name: cloudflare
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: cloudflare-api-token
+            key: api-token
+    sources:
+      - ingress
+    domainFilters:
+      - cpdevlab.com
+    policy: sync
+    txtOwnerId: k3s-prod
+    extraArgs:
+      - --cloudflare-proxied
+      - --default-targets=159.195.82.201
+      - --default-targets=159.195.81.219
+      - --default-targets=159.195.80.83
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        memory: 128Mi

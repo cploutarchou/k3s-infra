@@ -1,0 +1,8 @@
+---
+# HA k3s with embedded etcd. serial: 1 is mandatory — etcd members must
+# join one at a time; parallel joins can corrupt quorum bootstrap.
+- name: Install k3s servers (serial joins)
+  hosts: k3s_cluster
+  serial: 1
+  roles:
+    - k3s_server

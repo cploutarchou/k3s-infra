@@ -1,0 +1,31 @@
+---
+# --- Network ---
+vlan_iface: eth1
+vlan_cidr: 10.0.0.0/24
+vlan_prefix: 24
+vlan_mtu: 1400 # netcup vLAN carries an overhead; keep below the public MTU
+
+# --- k3s ---
+k3s_version: v1.33.4+k3s1
+k3s_first_server: k3s-01
+k3s_first_server_ip: 10.0.0.11
+# kube-vip control-plane VIP on the vLAN (also in tls-san)
+k3s_api_vip: 10.0.0.10
+k3s_token_file: /etc/rancher/k3s/cluster-token
+
+# --- etcd snapshots to Cloudflare R2 (EU jurisdiction) ---
+etcd_snapshot_cron: "0 */6 * * *"
+etcd_snapshot_retention: 28 # 7 days at 4/day
+r2_endpoint: 035087c37abeda0a744ab1c4c482d19f.eu.r2.cloudflarestorage.com
+r2_bucket: k3s-backups
+r2_region: auto
+# R2 credentials are NOT stored here. Provide them via the SOPS-encrypted
+# vars file ansible/vault/r2-credentials.sops.yml (see vault/README.md):
+#   r2_access_key_id: ...
+#   r2_secret_access_key: ...
+r2_access_key_id: ""
+r2_secret_access_key: ""
+
+# --- Hardening ---
+ssh_permit_root_login: prohibit-password # key-only root; no password auth anywhere
+unattended_upgrades: true

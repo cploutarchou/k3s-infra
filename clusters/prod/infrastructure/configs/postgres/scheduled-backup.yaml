@@ -1,0 +1,14 @@
+---
+# Nightly base backup; WAL archiving is continuous once barmanObjectStore
+# credentials exist.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: postgres-daily
+  namespace: databases
+spec:
+  # CNPG cron format includes seconds: 03:30 UTC daily.
+  schedule: "0 30 3 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: postgres

@@ -1,0 +1,14 @@
+# Managed by ansible (roles/hardening). Key-only SSH.
+PermitRootLogin {{ ssh_permit_root_login }}
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding yes
+MaxAuthTries 3
+LoginGraceTime 20
+ClientAliveInterval 300
+ClientAliveCountMax 2

@@ -1,0 +1,32 @@
+---
+# netcup vLAN on eth1, ifupdown (Debian 13 minimal default). The interface
+# is currently DOWN on all nodes; this brings it up persistently with the
+# node's 10.0.0.x address. No gateway — the vLAN is layer-2 only.
+- name: Configure eth1 vLAN interface
+  ansible.builtin.template:
+    src: eth1.j2
+    dest: /etc/network/interfaces.d/{{ vlan_iface }}
+    mode: "0644"
+  notify: Restart vlan interface
+
+- name: Bring up eth1 if down
+  ansible.builtin.command: ifup {{ vlan_iface }}
+  register: vlan_ifup_result
+  changed_when: vlan_ifup_result.rc == 0
+  failed_when:
+    - vlan_ifup_result.rc != 0
+    - "'already configured' not in vlan_ifup_result.stderr"
+
+- name: Verify vLAN address is present
+  ansible.builtin.command: ip -4 -o addr show dev {{ vlan_iface }}
+  register: vlan_addr
+  changed_when: false
+  failed_when: vlan_ip not in vlan_addr.stdout
+
+- name: Verify vLAN peers are reachable
+  ansible.builtin.command: ping -c 1 -W 2 -I {{ vlan_iface }} {{ hostvars[item].vlan_ip }}
+  loop: "{{ groups['k3s_cluster'] | difference([inventory_hostname]) }}"
+  changed_when: false
+  # Peers may not be configured yet on the first pass; warn, don't fail.
+  ignore_errors: true
+  register: vlan_ping

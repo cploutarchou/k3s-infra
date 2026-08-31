@@ -1,0 +1,27 @@
+---
+# Replaced by `flux bootstrap`; kept in sync with the intended layout.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: master
+  secretRef:
+    name: flux-system
+  url: ssh://git@github.com/cploutarchou/k3s-infra
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./clusters/prod
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

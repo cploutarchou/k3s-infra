@@ -1,0 +1,10 @@
+---
+# Full day-0 run, in order. Each stage can also be run on its own.
+- name: Base hardening
+  ansible.builtin.import_playbook: 00-hardening.yml
+
+- name: Network (vLAN + firewall)
+  ansible.builtin.import_playbook: 10-network.yml
+
+- name: K3s install
+  ansible.builtin.import_playbook: 20-k3s.yml
