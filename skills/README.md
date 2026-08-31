@@ -20,6 +20,22 @@ situations named in its `description`, or explicitly via
 definition. Install that one as `.claude/agents/incident-triage.md`
 (agents and skills live in different directories).
 
+## Where they are active
+
+- **This repo (local and cloud)**: copies are committed under
+  `.claude/skills/` and `.claude/agents/`, so every Claude Code session
+  on this repo — including claude.ai/code cloud sessions, which clone
+  the repo — loads them automatically. `skills/` remains the canonical,
+  copy-out source; edit there and re-sync the `.claude/` copies.
+- **Other repos (local or cloud)**: copy the folders into that repo's
+  `.claude/skills/` (and the agent into `.claude/agents/`) and commit —
+  cloud sessions only see what is committed.
+- **claude.ai chat**: upload the ready-made zips from `dist/` via
+  Settings → Capabilities → Skills (paid plans). Chat supports skills
+  only — custom agents exist in Claude Code, not claude.ai chat; the
+  incident-triage *skill* upload gives chat the same procedure without
+  the agent's tool sandbox.
+
 ## Contents
 
 | Folder | What it enforces |
