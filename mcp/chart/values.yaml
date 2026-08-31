@@ -3,7 +3,7 @@ image:
   # Pin by digest before deploying (repo convention — never :latest):
   #   docker buildx imagetools inspect ghcr.io/cploutarchou/k3s-infra-mcp:<tag>
   digest: "" # e.g. sha256:abc123...
-  tag: "0.1.0" # used only if digest is empty; CI should always set digest
+  tag: "0.2.0" # used only if digest is empty; CI should always set digest
 
 replicaCount: 1
 

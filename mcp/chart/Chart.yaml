@@ -2,5 +2,5 @@ apiVersion: v2
 name: mcp-server
 description: k3s-infra MCP server — read-only cluster tools, PR-based writes
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"

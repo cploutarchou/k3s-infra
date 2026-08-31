@@ -14,7 +14,7 @@ import (
 	"github.com/cploutarchou/k3s-infra/mcp/internal/tools"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func main() {
 	apiKey := os.Getenv("MCP_API_KEY")
