@@ -1,0 +1,56 @@
+---
+# Side-load a container image into k3s containerd on every node, registered
+# under both its tag and its digest reference. Interim path while the GHCR
+# push is blocked (docs/decisions.md) — retire once the registry works.
+#
+#   ansible-playbook playbooks/30-sideload-image.yml \
+#     -e sideload_tar=/path/to/image.tar \
+#     -e sideload_image=ghcr.io/cploutarchou/k3s-infra-mcp:0.2.0
+- name: Side-load container image into k3s containerd
+  hosts: k3s_cluster
+  any_errors_fatal: true
+  vars:
+    sideload_tar: ""
+    sideload_image: ""
+  tasks:
+    - name: Require tar and image vars
+      ansible.builtin.assert:
+        that:
+          - sideload_tar | length > 0
+          - sideload_image | length > 0
+        fail_msg: pass -e sideload_tar=... -e sideload_image=...
+
+    - name: Copy image tar to node
+      ansible.builtin.copy:
+        src: "{{ sideload_tar }}"
+        dest: /var/lib/rancher/tmp/sideload.tar
+        mode: "0600"
+
+    - name: Import image into containerd (k8s.io namespace)
+      ansible.builtin.command: k3s ctr images import /var/lib/rancher/tmp/sideload.tar
+      changed_when: true
+
+    - name: Read manifest digest containerd assigned
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        k3s ctr images ls name=={{ sideload_image }} | awk 'NR==2 {print $3}'
+      args:
+        executable: /bin/bash
+      register: sideload_digest
+      changed_when: false
+      failed_when: "'sha256:' not in sideload_digest.stdout"
+
+    - name: Register the digest reference alongside the tag
+      ansible.builtin.command: >-
+        k3s ctr images tag --force {{ sideload_image }}
+        {{ sideload_image | regex_replace(':[^:]+$', '') }}@{{ sideload_digest.stdout }}
+      changed_when: true
+
+    - name: Remove image tar from node
+      ansible.builtin.file:
+        path: /var/lib/rancher/tmp/sideload.tar
+        state: absent
+
+    - name: Report digest
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ sideload_image }} digest {{ sideload_digest.stdout }}"

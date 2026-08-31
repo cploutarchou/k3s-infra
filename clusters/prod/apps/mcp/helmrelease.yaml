@@ -21,8 +21,8 @@ spec:
     # push is pending on a packages-scoped token.
     image:
       repository: ghcr.io/cploutarchou/k3s-infra-mcp
-      digest: "sha256:41dd06902c113bda15d2ec2fd1b8998844d7e9061a822e484ebd467f35c00bb7"
-      tag: "0.1.0"
+      digest: "sha256:5c9d6078153d56d4bf5504588ac8eca6225f1b78a3c1011b58ef4388331caa8c"
+      tag: "0.2.0"
     existingSecret: mcp-server
     github:
       owner: cploutarchou

@@ -1,7 +1,13 @@
 # mcp — k3s-infra MCP server
 
 Go MCP server exposing the cluster to AI agents over streamable HTTP at
-`/mcp`, authenticated with an `X-API-Key` header.
+`/mcp`. Auth: the API key travels as `X-API-Key: <key>` or
+`Authorization: Bearer <key>`. The handshake subset (`initialize`,
+`notifications/initialized`, `tools/list`, `ping`) is deliberately
+unauthenticated so connector clients (claude.ai) can probe the URL before
+credentials are configured — it exposes only the server name and tool
+schemas. Every `tools/call` requires the key; unauthorized calls get 401
+with a `WWW-Authenticate` header.
 
 ## Tools
 
