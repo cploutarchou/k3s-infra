@@ -12,7 +12,7 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: "34.4.1"
+      version: "41.4.0" # traefik v3.7.12
       sourceRef:
         kind: HelmRepository
         name: traefik
@@ -25,15 +25,15 @@ spec:
     ports:
       web:
         hostPort: 80
-        redirections:
-          entryPoint:
-            to: websecure
-            scheme: https
-            permanent: true
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true
       websecure:
         hostPort: 443
-        tls:
-          enabled: true
+        # http.tls.enabled defaults to true on websecure in chart 41.x
     ingressClass:
       enabled: true
       isDefaultClass: true
@@ -57,6 +57,5 @@ spec:
       failureThreshold: 1
       initialDelaySeconds: 2
       periodSeconds: 10
-    logs:
-      general:
-        level: INFO
+    log:
+      level: INFO
