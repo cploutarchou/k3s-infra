@@ -1,10 +1,9 @@
-# SOPS creation rules.
-# Replace the age recipient below with the real cluster public key before
-# encrypting anything (age-keygen -o age.agekey; keep the private key OUT of git).
-# Flux decrypts with the `sops-age` secret in flux-system (see docs/runbooks/bootstrap.md).
+# SOPS creation rules. Recipient: cluster age key generated 2026-08-31;
+# private key lives at ~/.config/sops/age/keys.txt on the operator machine
+# (and, once bootstrapped, in the flux-system/sops-age secret) — never in git.
 creation_rules:
   - path_regex: clusters/.*\.sops\.ya?ml$
     encrypted_regex: ^(data|stringData)$
-    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplaceh
+    age: age1lm0sz9afv6fdmpqcfsrhcfvkfcw6rgga20mpplrryxwcppfd6glq959w5j
   - path_regex: ansible/.*vault.*\.ya?ml$
-    age: age1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplaceh
+    age: age1lm0sz9afv6fdmpqcfsrhcfvkfcw6rgga20mpplrryxwcppfd6glq959w5j
