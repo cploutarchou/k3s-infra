@@ -6,3 +6,4 @@ kind: Kustomization
 resources:
   - mcp
   - monitoring
+  - website

@@ -31,6 +31,16 @@ spec:
     limits:
       memory: 1Gi
 
+  # App roles are managed declaratively; passwords come from SOPS secrets in
+  # this namespace (each app dir owns its credentials secret).
+  managed:
+    roles:
+      - name: website
+        ensure: present
+        login: true
+        passwordSecret:
+          name: website-db-credentials
+
   postgresql:
     parameters:
       max_connections: "120"
