@@ -4,6 +4,7 @@
   register: k3s_server_vlan_check
   changed_when: false
   failed_when: vlan_ip not in k3s_server_vlan_check.stdout
+  when: not ansible_check_mode
 
 - name: Warn if R2 credentials are absent (snapshots stay local-only)
   ansible.builtin.debug:
@@ -25,6 +26,10 @@
   delegate_to: "{{ k3s_first_server }}"
   register: k3s_server_token_slurp
   when: inventory_hostname != k3s_first_server
+  # In --check on a fresh cluster the token doesn't exist yet; the config
+  # template falls back to a placeholder so the diff still renders.
+  check_mode: false
+  failed_when: k3s_server_token_slurp is failed and not ansible_check_mode
 
 - name: Render k3s config.yaml
   ansible.builtin.template:
@@ -77,3 +82,4 @@
   delay: 15
   register: k3s_server_node_ready
   until: k3s_server_node_ready.rc == 0
+  when: not ansible_check_mode

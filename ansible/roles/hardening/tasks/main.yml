@@ -1,4 +1,16 @@
 ---
+# Minimal netcup images ship without python3-apt, which the apt module
+# needs (strictly, in --check mode; normal runs auto-install it). This is
+# the one task that mutates even during a dry run.
+- name: Bootstrap python3-apt for the apt module
+  ansible.builtin.raw: >-
+    test -d /usr/lib/python3/dist-packages/apt ||
+    (apt-get update -qq &&
+     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-apt && echo INSTALLED)
+  register: hardening_bootstrap_apt
+  check_mode: false
+  changed_when: "'INSTALLED' in hardening_bootstrap_apt.stdout | default('')"
+
 - name: Install base packages
   ansible.builtin.apt:
     name:

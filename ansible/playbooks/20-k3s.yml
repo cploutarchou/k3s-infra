@@ -3,6 +3,7 @@
 # join one at a time; parallel joins can corrupt quorum bootstrap.
 - name: Install k3s servers (serial joins)
   hosts: k3s_cluster
+  any_errors_fatal: true
   serial: 1
   roles:
     - k3s_server
