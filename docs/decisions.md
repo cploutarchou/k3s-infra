@@ -20,6 +20,22 @@ Short log of choices that aren't obvious from the manifests.
 - **DNS-01 (not HTTP-01)** — records are Cloudflare-proxied, HTTP-01
   origin checks are unreliable behind the proxy; DNS-01 also allows
   wildcard certs.
+- **CNPG backups via the Barman Cloud Plugin** — operator 1.30 with
+  `-standard-` images has no barman binaries in-pod, so in-tree
+  `spec.backup.barmanObjectStore` fails at WAL archive time. The
+  `plugin-barman-cloud` HelmRelease + an `ObjectStore` CR + the cluster's
+  `plugins:` stanza are the supported path; ScheduledBackups use
+  `method: plugin`.
+- **external-dns needs explicit target annotations** — with Traefik's
+  publishedService disabled (hostPort ingress), ingresses carry no status
+  address and external-dns generates no endpoints for them;
+  `--default-targets` never kicks in. Every public ingress carries
+  `external-dns.alpha.kubernetes.io/target: <the three node IPs>`.
+- **Apex and www DNS are operator-owned** — cpdevlab.com (A, unproxied →
+  k3s-01) and www (CNAME) existed before external-dns; with `policy: sync`
+  and txt ownership it correctly refuses to seize them. Migrating them to
+  external-dns means deleting the manual records so it can recreate them
+  proxied with all three targets — an operator decision, not automated.
 - **external-dns default-targets = node public IPs** — Traefik has no
   LoadBalancer status to publish; explicit targets keep records correct.
 - **R2 EU endpoint** — bucket jurisdiction is EU, so the S3 endpoint is
