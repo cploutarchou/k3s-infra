@@ -1,0 +1,97 @@
+---
+# Scheduled publishing + GitHub/package sync. Both hit the app's own API
+# over the cluster network using the shared CRON_SECRET; the runtime image
+# is reused (node fetch) so no extra image needs side-loading.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: website-publish-scheduled
+  namespace: website
+spec:
+  schedule: "*/15 * * * *"
+  timeZone: Asia/Nicosia
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: publish
+              image: ghcr.io/cploutarchou/personal-website:0.2.1@sha256:490519ee0c4e963aa514898bfd51e835625ddb7f90f0a73471d1b9274deda6a8
+              imagePullPolicy: IfNotPresent
+              command:
+                - node
+                - -e
+                - |
+                  fetch('http://website.website.svc/api/cron/publish-scheduled', {
+                    headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+                  }).then((r) => {
+                    console.log('publish-scheduled', r.status)
+                    if (!r.ok) process.exit(1)
+                  }).catch((e) => { console.error(e); process.exit(1) })
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: website
+                      key: CRON_SECRET
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: website-sync-external
+  namespace: website
+spec:
+  schedule: "0 3 * * *"
+  timeZone: Asia/Nicosia
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: sync
+              image: ghcr.io/cploutarchou/personal-website:0.2.1@sha256:490519ee0c4e963aa514898bfd51e835625ddb7f90f0a73471d1b9274deda6a8
+              imagePullPolicy: IfNotPresent
+              command:
+                - node
+                - -e
+                - |
+                  const call = async (path) => {
+                    const r = await fetch(`http://website.website.svc${path}`, {
+                      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+                    })
+                    console.log(path, r.status)
+                    return r.ok
+                  }
+                  Promise.all([call('/api/sync/github'), call('/api/sync/packages')])
+                    .then((oks) => { if (oks.includes(false)) process.exit(1) })
+                    .catch((e) => { console.error(e); process.exit(1) })
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: website
+                      key: CRON_SECRET
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi

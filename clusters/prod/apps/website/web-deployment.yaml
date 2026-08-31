@@ -1,0 +1,73 @@
+---
+# Next.js standalone app (github.com/cploutarchou/my-personal-website).
+# Image is side-loaded on all three nodes under this digest via
+# ansible/playbooks/30-sideload-image.yml (no registry pull path yet — see
+# docs/decisions.md); imagePullPolicy stays IfNotPresent.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: website
+  namespace: website
+  labels:
+    app.kubernetes.io/name: website
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: website
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: website
+    spec:
+      initContainers:
+        # Applies committed Prisma migrations before the app starts. Safe
+        # with replicas: 1; revisit (migration Job) if replicas grow.
+        - name: migrate
+          image: ghcr.io/cploutarchou/personal-website-migrate:0.2.1@sha256:c12e2629f14354cedf5047c80d2b54014a366e138a121fe2d8247de518dd1451
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: website
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      containers:
+        - name: web
+          image: ghcr.io/cploutarchou/personal-website:0.2.1@sha256:490519ee0c4e963aa514898bfd51e835625ddb7f90f0a73471d1b9274deda6a8
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: SITE_URL
+              value: https://christosploutarchou.com
+            - name: NEXTAUTH_URL
+              value: https://christosploutarchou.com
+            - name: SITE_TIMEZONE
+              value: Asia/Nicosia
+            - name: ADMIN_GITHUB_ID
+              value: "49656626"
+            - name: ADMIN_GITHUB_LOGIN
+              value: cploutarchou
+          envFrom:
+            - secretRef:
+                name: website
+          # /api/health runs a real query, so readiness also gates on the
+          # database being reachable and migrated.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi

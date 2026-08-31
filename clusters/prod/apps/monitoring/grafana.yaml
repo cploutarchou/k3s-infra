@@ -85,3 +85,58 @@ spec:
           gnetId: 17346
           revision: 9
           datasource: VictoriaMetrics
+        # Per-app dashboard for the website workload (custom, provisioned
+        # from git — no gnetId). HTTP series come from Traefik's service
+        # metrics (the app exposes no /metrics of its own); pod series from
+        # kube-state-metrics + cadvisor; database series from the CNPG
+        # exporter filtered to the website database.
+        website:
+          json: |
+            {
+              "uid": "website-app",
+              "title": "Website (christosploutarchou.com)",
+              "schemaVersion": 39,
+              "refresh": "1m",
+              "time": { "from": "now-6h", "to": "now" },
+              "panels": [
+                { "id": 1, "type": "stat", "title": "Pods ready", "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "sum(kube_pod_status_ready{namespace=\"website\", condition=\"true\"})" }] },
+                { "id": 2, "type": "stat", "title": "Container restarts (24h)", "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"website\"}[24h]))" }] },
+                { "id": 3, "type": "stat", "title": "DB connections (website)", "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "sum(cnpg_backends_total{datname=\"website\"})" }] },
+                { "id": 4, "type": "stat", "title": "Last base backup age (h)", "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "(time() - max(cnpg_collector_last_available_backup_timestamp)) / 3600" }] },
+                { "id": 5, "type": "timeseries", "title": "HTTP request rate by code (Traefik)", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "sum by (code) (rate(traefik_service_requests_total{service=~\"website-.*\"}[5m]))", "legendFormat": "{{code}}" }] },
+                { "id": 6, "type": "timeseries", "title": "HTTP 5xx rate (Traefik)", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "sum(rate(traefik_service_requests_total{service=~\"website-.*\", code=~\"5..\"}[5m]))" }] },
+                { "id": 7, "type": "timeseries", "title": "CPU usage vs limit", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [
+                    { "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"website\", container!=\"\"}[5m]))", "legendFormat": "{{pod}}" },
+                    { "expr": "sum(kube_pod_container_resource_limits{namespace=\"website\", resource=\"cpu\"})", "legendFormat": "limit" }
+                  ] },
+                { "id": 8, "type": "timeseries", "title": "Memory working set vs limit", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [
+                    { "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"website\", container!=\"\"})", "legendFormat": "{{pod}}" },
+                    { "expr": "sum(kube_pod_container_resource_limits{namespace=\"website\", resource=\"memory\"})", "legendFormat": "limit" }
+                  ],
+                  "fieldConfig": { "defaults": { "unit": "bytes" } } },
+                { "id": 9, "type": "timeseries", "title": "CNPG replication lag", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "max by (pod) (cnpg_pg_replication_lag)", "legendFormat": "{{pod}}" }],
+                  "fieldConfig": { "defaults": { "unit": "s" } } },
+                { "id": 10, "type": "timeseries", "title": "CronJob last success age", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+                  "datasource": "VictoriaMetrics",
+                  "targets": [{ "expr": "time() - kube_cronjob_status_last_successful_time{namespace=\"website\"}", "legendFormat": "{{cronjob}}" }],
+                  "fieldConfig": { "defaults": { "unit": "s" } } }
+              ]
+            }

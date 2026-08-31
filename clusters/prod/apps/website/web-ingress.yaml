@@ -1,0 +1,93 @@
+---
+# Canonical host. external-dns publishes each host against all three node
+# IPs (target annotation), certificates via DNS-01 on the widened
+# Cloudflare token (see cert-manager cluster-issuer dnsZones).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: website
+  namespace: website
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - christosploutarchou.com
+      secretName: christosploutarchou-com-tls
+  rules:
+    - host: christosploutarchou.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  name: http
+---
+# Alias hosts 301 to the canonical apex. Traefik v3 CRD middleware; only
+# attached to this ingress so the canonical host cannot redirect-loop.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-canonical
+  namespace: website
+spec:
+  redirectRegex:
+    regex: "^https?://[^/]+/(.*)"
+    replacement: "https://christosploutarchou.com/${1}"
+    permanent: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: website-aliases
+  namespace: website
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"
+    traefik.ingress.kubernetes.io/router.middlewares: website-redirect-to-canonical@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - www.christosploutarchou.com
+      secretName: www-christosploutarchou-com-tls
+    - hosts:
+        - cploutarchou.com
+        - www.cploutarchou.com
+      secretName: cploutarchou-com-tls
+  rules:
+    - host: www.christosploutarchou.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  name: http
+    - host: cploutarchou.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  name: http
+    - host: www.cploutarchou.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  name: http
