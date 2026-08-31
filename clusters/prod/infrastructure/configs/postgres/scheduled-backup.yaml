@@ -10,5 +10,8 @@ spec:
   # CNPG cron format includes seconds: 03:30 UTC daily.
   schedule: "0 30 3 * * *"
   backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
   cluster:
     name: postgres

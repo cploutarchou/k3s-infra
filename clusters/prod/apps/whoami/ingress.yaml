@@ -12,8 +12,19 @@ spec:
     - hosts:
         - cpdevlab.com
         - www.cpdevlab.com
+        - whoami.cpdevlab.com
       secretName: cpdevlab-com-tls
   rules:
+    - host: whoami.cpdevlab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: whoami
+                port:
+                  name: http
     - host: cpdevlab.com
       http:
         paths:

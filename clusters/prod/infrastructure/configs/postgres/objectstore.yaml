@@ -1,0 +1,23 @@
+---
+# R2 object store definition consumed by the Barman Cloud Plugin.
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: r2-store
+  namespace: databases
+spec:
+  retentionPolicy: 14d
+  configuration:
+    destinationPath: s3://k3s-backups/postgres
+    endpointURL: https://035087c37abeda0a744ab1c4c482d19f.eu.r2.cloudflarestorage.com
+    s3Credentials:
+      accessKeyId:
+        name: r2-backup-credentials
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: r2-backup-credentials
+        key: SECRET_ACCESS_KEY
+    wal:
+      compression: zstd
+    data:
+      compression: snappy

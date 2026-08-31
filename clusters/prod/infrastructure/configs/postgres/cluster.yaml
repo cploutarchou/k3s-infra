@@ -37,20 +37,11 @@ spec:
       shared_buffers: 256MB
       effective_cache_size: 768MB
 
-  backup:
-    retentionPolicy: 14d
-    barmanObjectStore:
-      destinationPath: s3://k3s-backups/postgres
-      endpointURL: https://035087c37abeda0a744ab1c4c482d19f.eu.r2.cloudflarestorage.com
-      s3Credentials:
-        accessKeyId:
-          name: r2-backup-credentials
-          key: ACCESS_KEY_ID
-        secretAccessKey:
-          name: r2-backup-credentials
-          key: SECRET_ACCESS_KEY
-      wal:
-        compression: zstd
-      data:
-        # CRD only allows bzip2|gzip|snappy for base-backup data
-        compression: snappy
+  # WAL archiving + backups via the Barman Cloud Plugin (see
+  # objectstore.yaml); in-tree barmanObjectStore is unusable with the
+  # -standard- images (no barman binaries).
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: r2-store
