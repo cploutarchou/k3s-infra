@@ -30,11 +30,27 @@ definition. Install that one as `.claude/agents/incident-triage.md`
 - **Other repos (local or cloud)**: copy the folders into that repo's
   `.claude/skills/` (and the agent into `.claude/agents/`) and commit —
   cloud sessions only see what is committed.
+- **All repos for one user (this machine)**: run `./skills/install.sh` —
+  copies everything into `~/.claude/skills/` and `~/.claude/agents/`, so
+  every local Claude Code session on any repo loads them.
 - **claude.ai chat**: upload the ready-made zips from `dist/` via
   Settings → Capabilities → Skills (paid plans). Chat supports skills
   only — custom agents exist in Claude Code, not claude.ai chat; the
   incident-triage *skill* upload gives chat the same procedure without
   the agent's tool sandbox.
+
+## Distributing to coworkers
+
+- **Simplest**: point them at this repo — `git clone … && ./skills/install.sh`
+  covers all their local Claude Code sessions; the `dist/` zips cover
+  their claude.ai chat.
+- **Per-project**: commit the copies into each shared repo's
+  `.claude/skills/` (as done here) — then every collaborator and every
+  cloud session on that repo gets them with zero setup.
+- **Org-wide claude.ai**: on Team/Enterprise plans, workspace admins can
+  manage skills centrally from the admin settings — check with your
+  admin, as availability depends on plan and rollout; individual zip
+  upload always works as the fallback.
 
 ## Contents
 
