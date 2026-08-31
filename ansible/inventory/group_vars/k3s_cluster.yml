@@ -6,7 +6,9 @@ vlan_prefix: 24
 vlan_mtu: 1400 # netcup vLAN carries an overhead; keep below the public MTU
 
 # --- k3s ---
-k3s_version: v1.33.4+k3s1
+# v1.34 ships etcd v3.6.x — starting fresh on 1.34 avoids the etcd
+# 3.5 -> 3.6 zombie-member upgrade hazard entirely.
+k3s_version: v1.34.11+k3s1
 k3s_first_server: k3s-01
 k3s_first_server_ip: 10.0.0.11
 # kube-vip control-plane VIP on the vLAN (also in tls-san)

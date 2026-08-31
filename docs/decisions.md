@@ -2,6 +2,10 @@
 
 Short log of choices that aren't obvious from the manifests.
 
+- **k3s v1.34.11+k3s1 from day 0** — ships etcd v3.6.14 (verified in the
+  release notes). Bootstrapping straight onto 1.34 avoids the etcd
+  3.5 → 3.6 zombie-member upgrade hazard that clusters upgrading in place
+  have to navigate.
 - **etcd on all three nodes** — 3×server embedded etcd gives quorum 2/3
   with the smallest footprint; netcup nodes are homogeneous, no reason for
   dedicated workers at this scale.

@@ -28,9 +28,8 @@ spec:
           operator: Exists
       containers:
         - name: kube-vip
-          # TODO(pin-digest): resolve to sha256 digest before first deploy:
-          #   docker buildx imagetools inspect ghcr.io/kube-vip/kube-vip:v0.8.9
-          image: ghcr.io/kube-vip/kube-vip:v0.8.9
+          # v1.2.3 multi-arch index digest, verified against ghcr 2026-08-31
+          image: ghcr.io/kube-vip/kube-vip:v1.2.3@sha256:2fcdbb014a2e217b9ea1b6dacac53d6851b185af323cdd28d100ad82d74bc79a
           args: ["manager"]
           env:
             - name: vip_arp
