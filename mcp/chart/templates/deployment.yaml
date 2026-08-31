@@ -16,6 +16,10 @@ spec:
         {{- include "mcp-server.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "mcp-server.name" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
