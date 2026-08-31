@@ -16,7 +16,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: seed
-          image: ghcr.io/cploutarchou/personal-website-seed:0.2.2@sha256:8ae541db69f8dd2fd358fcbe94fe79064483a521d2602d7abdc97d42dc71fc0e
+          image: ghcr.io/cploutarchou/personal-website-seed:0.2.3@sha256:436cc992835f8ffb4f4d6cd3dd6951dad10cccc4cf90917a8ad1f24f554ac290
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
