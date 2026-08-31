@@ -10,3 +10,4 @@ resources:
   - web-service.yaml
   - web-ingress.yaml
   - cronjobs.yaml
+  - seed-job.yaml
