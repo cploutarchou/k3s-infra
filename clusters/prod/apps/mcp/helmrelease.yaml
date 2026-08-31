@@ -1,0 +1,36 @@
+---
+# Chart comes from this repo (mcp/chart) via the flux-system GitRepository.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mcp-server
+  namespace: mcp
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: ./mcp/chart
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  values:
+    # Image is side-loaded on all three nodes (containerd import) under this
+    # digest; no registry, no pull secret. See docs/decisions.md — a GHCR
+    # push is pending on a packages-scoped token.
+    image:
+      repository: ghcr.io/cploutarchou/k3s-infra-mcp
+      digest: "sha256:41dd06902c113bda15d2ec2fd1b8998844d7e9061a822e484ebd467f35c00bb7"
+      tag: "0.1.0"
+    existingSecret: mcp-server
+    github:
+      owner: cploutarchou
+      repo: k3s-infra
+    ingress:
+      enabled: true
+      host: mcp.cpdevlab.com
+      className: traefik
+      clusterIssuer: letsencrypt-prod
+      annotations:
+        external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"

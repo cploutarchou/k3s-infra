@@ -7,6 +7,10 @@ image:
 
 replicaCount: 1
 
+# GHCR package is private: reference a dockerconfigjson secret (SOPS-managed
+# in clusters/prod/apps/mcp/) e.g. [{name: ghcr-pull}].
+imagePullSecrets: []
+
 listenAddr: ":8080"
 
 # Existing Secret holding MCP_API_KEY (and optionally GITHUB_TOKEN).
@@ -25,6 +29,9 @@ ingress:
   host: mcp.cpdevlab.com
   className: traefik
   clusterIssuer: letsencrypt-prod
+  # Extra annotations (e.g. the external-dns target annotation — required,
+  # since hostPort Traefik leaves ingress status empty).
+  annotations: {}
 
 resources:
   requests:

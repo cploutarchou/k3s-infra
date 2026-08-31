@@ -51,6 +51,16 @@ Short log of choices that aren't obvious from the manifests.
   image bumps.
 - **One shared CNPG cluster** — 8 GB nodes can't afford per-app postgres;
   one cluster with 1 GB limit, one database per app, WAL-archived to R2.
+- **MCP image is side-loaded, registry push pending (2026-08-31)** — the
+  operator's fine-grained PAT has no packages permission, so
+  `ghcr.io/cploutarchou/k3s-infra-mcp@sha256:41dd0690…` was imported into
+  containerd on all three nodes (tag + digest refs) instead of being
+  pushed to GHCR. The HelmRelease pins the digest with
+  `imagePullPolicy: IfNotPresent` and no pull secret, so the digest rule
+  holds. Follow-up: push the image with a packages-scoped token, wire the
+  private-registry pull secret (chart already supports
+  `imagePullSecrets`), and remove this note. Until then a node rebuild
+  needs a re-import, and image updates mean a new side-load on every node.
 - **MCP writes only via PRs + flux reconcile** — the server holds
   list/get/watch RBAC plus `patch` on Flux kinds only; it cannot apply or
   delete anything. Cluster changes stay reviewable in git.
