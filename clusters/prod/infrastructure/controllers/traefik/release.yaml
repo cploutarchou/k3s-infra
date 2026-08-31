@@ -19,6 +19,13 @@ spec:
   values:
     deployment:
       kind: DaemonSet
+    # hostPort pods can't surge (the old pod holds 80/443), so roll by
+    # taking one node down at a time; Cloudflare retries the other origins.
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
     service:
       enabled: true
       type: ClusterIP
