@@ -16,13 +16,21 @@ spec:
         name: flux-system
         namespace: flux-system
   values:
+    replicaCount: 2
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: mcp-server
     # Image is side-loaded on all three nodes (containerd import) under this
     # digest; no registry, no pull secret. See docs/decisions.md — a GHCR
     # push is pending on a packages-scoped token.
     image:
       repository: ghcr.io/cploutarchou/k3s-infra-mcp
-      digest: "sha256:5c9d6078153d56d4bf5504588ac8eca6225f1b78a3c1011b58ef4388331caa8c"
-      tag: "0.2.0"
+      digest: "sha256:4c5547e1f08d48765ab05005c91e54504ba43589dc18dc493a324f3e1d431e13"
+      tag: "0.2.1"
     existingSecret: mcp-server
     github:
       owner: cploutarchou

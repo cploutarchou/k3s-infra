@@ -7,6 +7,9 @@ image:
 
 replicaCount: 1
 
+# Optional pod affinity/anti-affinity block, passed through verbatim.
+affinity: {}
+
 # GHCR package is private: reference a dockerconfigjson secret (SOPS-managed
 # in clusters/prod/apps/mcp/) e.g. [{name: ghcr-pull}].
 imagePullSecrets: []

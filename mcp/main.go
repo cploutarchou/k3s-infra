@@ -14,7 +14,7 @@ import (
 	"github.com/cploutarchou/k3s-infra/mcp/internal/tools"
 )
 
-const version = "0.2.0"
+const version = "0.2.1"
 
 func main() {
 	apiKey := os.Getenv("MCP_API_KEY")
@@ -33,8 +33,11 @@ func main() {
 	)
 	tools.Register(s, kc)
 
+	// Stateless: no in-memory session affinity, so the deployment can run
+	// multiple replicas behind one Service without sticky routing.
 	mcpHandler := server.NewStreamableHTTPServer(s,
 		server.WithEndpointPath("/mcp"),
+		server.WithStateLess(true),
 	)
 
 	mux := http.NewServeMux()
