@@ -22,6 +22,7 @@
   register: vlan_addr
   changed_when: false
   failed_when: vlan_ip not in vlan_addr.stdout
+  when: not ansible_check_mode
 
 - name: Verify vLAN peers are reachable
   ansible.builtin.command: ping -c 1 -W 2 -I {{ vlan_iface }} {{ hostvars[item].vlan_ip }}
@@ -30,3 +31,4 @@
   # Peers may not be configured yet on the first pass; warn, don't fail.
   ignore_errors: true
   register: vlan_ping
+  when: not ansible_check_mode

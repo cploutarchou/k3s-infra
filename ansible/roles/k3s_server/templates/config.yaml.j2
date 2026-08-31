@@ -3,7 +3,7 @@
 cluster-init: true
 {% else %}
 server: https://{{ k3s_first_server_ip }}:6443
-token: "{{ (k3s_server_token_slurp.content | b64decode).strip() }}"
+token: "{{ (k3s_server_token_slurp.content | b64decode).strip() if k3s_server_token_slurp.content is defined else 'CHECK-MODE-PLACEHOLDER' }}"
 {% endif %}
 
 # All cluster traffic on the netcup vLAN
