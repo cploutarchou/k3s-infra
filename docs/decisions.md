@@ -26,6 +26,13 @@ Short log of choices that aren't obvious from the manifests.
   `https://<account>.eu.r2.cloudflarestorage.com` (the plain
   `<account>.r2.cloudflarestorage.com` endpoint does not serve EU-pinned
   buckets).
+- **Postgres 17.x, not 18.x** — the shared cluster is pinned to the latest
+  17.x standard image (digest-pinned). 17 is a mature release series with
+  several minor releases of hardening behind it; 18 is still early in its
+  bugfix cycle, and a shared cluster serving every app is the wrong place
+  to absorb new-major surprises. Major upgrades are deliberate, tested
+  events (CNPG supports in-place major upgrades), not a side effect of
+  image bumps.
 - **One shared CNPG cluster** — 8 GB nodes can't afford per-app postgres;
   one cluster with 1 GB limit, one database per app, WAL-archived to R2.
 - **MCP writes only via PRs + flux reconcile** — the server holds
