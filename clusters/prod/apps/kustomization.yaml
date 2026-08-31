@@ -5,4 +5,4 @@ kind: Kustomization
 # here so Flux picks it up.
 resources:
   - mcp
-  - whoami
+  - monitoring

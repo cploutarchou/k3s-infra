@@ -1,0 +1,87 @@
+---
+# Stateless Grafana: no PVC, admin creds from SOPS, datasource and
+# dashboards provisioned from these values (dashboard JSON is downloaded
+# from grafana.com at pod start — revisions verified 2026-08-31).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: grafana
+      version: "10.5.15"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+  values:
+    fullnameOverride: grafana
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 192Mi
+      limits:
+        memory: 384Mi
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"
+      hosts:
+        - grafana.cpdevlab.com
+      tls:
+        - hosts:
+            - grafana.cpdevlab.com
+          secretName: grafana-cpdevlab-com-tls
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: VictoriaMetrics
+            type: prometheus
+            access: proxy
+            url: http://vmsingle.monitoring.svc:8428
+            isDefault: true
+    dashboardProviders:
+      dashboardproviders.yaml:
+        apiVersion: 1
+        providers:
+          - name: default
+            orgId: 1
+            folder: ""
+            type: file
+            disableDeletion: false
+            editable: true
+            options:
+              path: /var/lib/grafana/dashboards/default
+    dashboards:
+      default:
+        node-exporter-full:
+          gnetId: 1860
+          revision: 45
+          datasource: VictoriaMetrics
+        k8s-views-global:
+          gnetId: 15757
+          revision: 43
+          datasource: VictoriaMetrics
+        etcd:
+          gnetId: 3070
+          revision: 3
+          datasource: VictoriaMetrics
+        cloudnativepg:
+          gnetId: 20417
+          revision: 4
+          datasource: VictoriaMetrics
+        traefik:
+          gnetId: 17346
+          revision: 9
+          datasource: VictoriaMetrics

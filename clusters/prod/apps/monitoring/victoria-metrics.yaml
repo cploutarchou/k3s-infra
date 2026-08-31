@@ -1,0 +1,129 @@
+---
+# Single-node VictoriaMetrics: Prometheus-compatible TSDB with built-in
+# scraping (no separate vmagent). Retention 30d on local-path storage.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: victoria-metrics
+  namespace: monitoring
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: victoria-metrics-single
+      version: "0.45.0"
+      sourceRef:
+        kind: HelmRepository
+        name: victoria-metrics
+  values:
+    server:
+      fullnameOverride: vmsingle
+      retentionPeriod: "30d"
+      persistentVolume:
+        enabled: true
+        storageClassName: local-path
+        size: 10Gi
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+      scrape:
+        enabled: true
+        config:
+          global:
+            scrape_interval: 30s
+          scrape_configs:
+            - job_name: victoria-metrics
+              static_configs:
+                - targets: ["localhost:8428"]
+
+            # node-exporter runs hostNetwork on :9100 (see node-exporter.yaml)
+            - job_name: node-exporter
+              kubernetes_sd_configs:
+                - role: node
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_node_name]
+                  target_label: node
+                - source_labels: [__meta_kubernetes_node_address_InternalIP]
+                  target_label: __address__
+                  replacement: "$1:9100"
+
+            - job_name: kube-state-metrics
+              static_configs:
+                - targets: ["kube-state-metrics.monitoring.svc:8080"]
+
+            # kubelet + cadvisor over the node HTTPS port
+            - job_name: kubelet
+              scheme: https
+              kubernetes_sd_configs:
+                - role: node
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                insecure_skip_verify: true
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_node_name]
+                  target_label: node
+            - job_name: cadvisor
+              scheme: https
+              metrics_path: /metrics/cadvisor
+              kubernetes_sd_configs:
+                - role: node
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                insecure_skip_verify: true
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_node_name]
+                  target_label: node
+
+            - job_name: apiserver
+              scheme: https
+              static_configs:
+                - targets: ["kubernetes.default.svc:443"]
+              bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+              tls_config:
+                insecure_skip_verify: true
+
+            # k3s embedded etcd metrics (etcd-expose-metrics: true, port
+            # 2381 on the vLAN; nftables keeps it off the public side)
+            - job_name: etcd
+              static_configs:
+                - targets:
+                    - "10.0.0.11:2381"
+                    - "10.0.0.12:2381"
+                    - "10.0.0.13:2381"
+
+            # CNPG instances expose postgres metrics on :9187
+            - job_name: cnpg
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: [databases]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_cnpg_io_cluster]
+                  regex: postgres
+                  action: keep
+                - source_labels: [__meta_kubernetes_pod_ip]
+                  target_label: __address__
+                  replacement: "$1:9187"
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+
+            # Traefik chart exposes prometheus metrics on :9100 (pod port
+            # "metrics"; pods use pod IPs, no clash with node-exporter's
+            # hostNetwork 9100)
+            - job_name: traefik
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: [traefik]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+                  regex: traefik
+                  action: keep
+                - source_labels: [__meta_kubernetes_pod_ip]
+                  target_label: __address__
+                  replacement: "$1:9100"
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
