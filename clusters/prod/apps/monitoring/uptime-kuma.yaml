@@ -86,8 +86,34 @@ spec:
     - hosts:
         - status.cpdevlab.com
       secretName: status-cpdevlab-com-tls
+    # Apex + www point at the status page (operator decision 2026-08-31);
+    # previously manual records, now external-dns-owned.
+    - hosts:
+        - cpdevlab.com
+        - www.cpdevlab.com
+      secretName: cpdevlab-com-tls
   rules:
     - host: status.cpdevlab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uptime-kuma
+                port:
+                  name: http
+    - host: cpdevlab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: uptime-kuma
+                port:
+                  name: http
+    - host: www.cpdevlab.com
       http:
         paths:
           - path: /
