@@ -59,3 +59,18 @@ spec:
       periodSeconds: 10
     log:
       level: INFO
+    # TEMPORARY (2026-08-31): access logs for MCP connector debugging.
+    # Secret-bearing headers are REDACTED (presence visible, value never
+    # logged). Remove this block when the investigation is done.
+    accessLog:
+      enabled: true
+      format: json
+      fields:
+        headers:
+          defaultMode: drop
+          names:
+            Authorization: redact
+            X-Api-Key: redact
+            Cf-Connecting-Ip: keep
+            User-Agent: keep
+            Mcp-Session-Id: keep
