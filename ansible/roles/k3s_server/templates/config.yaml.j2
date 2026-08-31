@@ -24,6 +24,10 @@ disable:
   - traefik
   - servicelb
 
+# etcd metrics for VictoriaMetrics on :2381 — vLAN-reachable only, the
+# public side is closed by nftables
+etcd-expose-metrics: true
+
 # Embedded etcd snapshots -> Cloudflare R2 (EU jurisdiction)
 etcd-snapshot-schedule-cron: "{{ etcd_snapshot_cron }}"
 etcd-snapshot-retention: {{ etcd_snapshot_retention }}
