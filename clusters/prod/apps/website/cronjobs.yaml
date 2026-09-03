@@ -75,6 +75,7 @@ spec:
                 - |
                   const call = async (path) => {
                     const r = await fetch(`http://website.website.svc${path}`, {
+                      method: 'POST',
                       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
                     })
                     console.log(path, r.status)
