@@ -37,7 +37,7 @@ spec:
               memory: 512Mi
       containers:
         - name: web
-          image: ghcr.io/cploutarchou/personal-website:0.2.5@sha256:aae4f918aa649642a6abb900257c1f75610a285257afe904d42ba04ddb01b0b5
+          image: ghcr.io/cploutarchou/personal-website:0.2.6@sha256:63412204e1140e93c3707366c79699128b6dae0b7ef1cb7f19ea0b560229ec6e
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
