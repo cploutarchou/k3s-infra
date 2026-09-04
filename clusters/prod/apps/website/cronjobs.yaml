@@ -22,7 +22,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: publish
-              image: ghcr.io/cploutarchou/personal-website:0.2.10@sha256:2a2c76625acf37130b38085a18bc46454423a5a054a9e50d819660c4795eafa0
+              image: ghcr.io/cploutarchou/personal-website:0.3.0@sha256:c872bc9bbf9d6a2ac6a197a2067f585014cba26ee5bcb75e13c8a4805e6bee95
               imagePullPolicy: IfNotPresent
               command:
                 - node
@@ -67,7 +67,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: sync
-              image: ghcr.io/cploutarchou/personal-website:0.2.10@sha256:2a2c76625acf37130b38085a18bc46454423a5a054a9e50d819660c4795eafa0
+              image: ghcr.io/cploutarchou/personal-website:0.3.0@sha256:c872bc9bbf9d6a2ac6a197a2067f585014cba26ee5bcb75e13c8a4805e6bee95
               imagePullPolicy: IfNotPresent
               command:
                 - node
