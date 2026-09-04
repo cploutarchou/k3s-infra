@@ -24,7 +24,7 @@ spec:
         # Applies committed Prisma migrations before the app starts. Safe
         # with replicas: 1; revisit (migration Job) if replicas grow.
         - name: migrate
-          image: ghcr.io/cploutarchou/personal-website-migrate:0.3.0@sha256:2e4eeab586294c4c502b14fdc2fc8a7141cc4689810e863b7c955b658c62fb52
+          image: ghcr.io/cploutarchou/personal-website-migrate:0.3.1@sha256:7e4f67f5f6531b079f9acbca020b15c9ce41bd0623ee1eacad02692110c6d0ee
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
@@ -37,7 +37,7 @@ spec:
               memory: 512Mi
       containers:
         - name: web
-          image: ghcr.io/cploutarchou/personal-website:0.3.0@sha256:c872bc9bbf9d6a2ac6a197a2067f585014cba26ee5bcb75e13c8a4805e6bee95
+          image: ghcr.io/cploutarchou/personal-website:0.3.1@sha256:20da7af99788c18088fd1ccf0f19d520f565821c5bbde1aa2329e17b4aa3da5b
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
