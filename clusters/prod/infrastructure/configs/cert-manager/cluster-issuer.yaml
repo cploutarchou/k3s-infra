@@ -20,6 +20,7 @@ spec:
             - cpdevlab.com
             - christosploutarchou.com
             - cploutarchou.com
+            - gvasiliourolex.com.cy
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -42,3 +43,4 @@ spec:
             - cpdevlab.com
             - christosploutarchou.com
             - cploutarchou.com
+            - gvasiliourolex.com.cy

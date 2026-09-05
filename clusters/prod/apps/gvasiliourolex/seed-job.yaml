@@ -1,0 +1,30 @@
+---
+# One-shot seed of the gvasiliourolex database (src/db/seed.ts). Upserts
+# by fixed ids, so a re-run is safe. The Job is kept in git as a record of
+# the bootstrap. Bump the suffix to re-run — a completed Job is immutable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gvasiliourolex-seed-1
+  namespace: gvasiliourolex
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: ghcr.io/cploutarchou/gvasiliourolex-seed:1.0.0@sha256:c3554313492f39de34760d62b5ae2ba15daf06560d76690f0a64476b4f244e09
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: gvasiliourolex
+            - secretRef:
+                name: gvasiliourolex-seed
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

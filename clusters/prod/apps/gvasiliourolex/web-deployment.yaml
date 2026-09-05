@@ -1,0 +1,74 @@
+---
+# Next.js standalone server (gvasiliourolex-site, 1.0.0). Image is
+# side-loaded on all three nodes under this digest via
+# ansible/playbooks/30-sideload-image.yml (no registry pull path yet — see
+# docs/decisions.md); imagePullPolicy stays IfNotPresent.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gvasiliourolex
+  namespace: gvasiliourolex
+  labels:
+    app.kubernetes.io/name: gvasiliourolex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gvasiliourolex
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gvasiliourolex
+    spec:
+      initContainers:
+        # `drizzle-kit migrate`. Safe with replicas: 1; move to a Job if
+        # replicas ever grow.
+        - name: migrate
+          image: ghcr.io/cploutarchou/gvasiliourolex-migrate:1.0.0@sha256:9411416fd2aed622a50a10d25b561dbfa6f686742fe812675077e2472387160a
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: gvasiliourolex
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      containers:
+        - name: web
+          image: ghcr.io/cploutarchou/gvasiliourolex:1.0.0@sha256:b545df79c30f8d97e73866b8177376a6cfbcf5682a5a7e632009bbb6b958c29d
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3100
+          env:
+            - name: NEXT_PUBLIC_SITE_URL
+              value: https://gvasiliourolex.com.cy
+            - name: APP_ALLOWED_ORIGINS
+              value: https://gvasiliourolex.com.cy
+          envFrom:
+            - secretRef:
+                name: gvasiliourolex
+          volumeMounts:
+            - name: media
+              mountPath: /app/storage/media
+          # /api/health runs a real query, so readiness also gates on the
+          # database being reachable and migrated.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: gvasiliourolex-media

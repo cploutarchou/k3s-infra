@@ -4,6 +4,7 @@ kind: Kustomization
 # One directory per app (see CLAUDE.md conventions). Register each new app
 # here so Flux picks it up.
 resources:
+  - gvasiliourolex
   - mcp
   - monitoring
   - website
