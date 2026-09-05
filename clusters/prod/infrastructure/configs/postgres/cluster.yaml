@@ -40,6 +40,11 @@ spec:
         login: true
         passwordSecret:
           name: website-db-credentials
+      - name: gvasiliourolex
+        ensure: present
+        login: true
+        passwordSecret:
+          name: gvasiliourolex-db-credentials
 
   postgresql:
     parameters:

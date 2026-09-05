@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - database.yaml
+  - gvasiliourolex-db-credentials.sops.yaml
+  - gvasiliourolex-secret.sops.yaml
+  - gvasiliourolex-seed-secret.sops.yaml
+  - media-pvc.yaml
+  - web-deployment.yaml
+  - web-service.yaml
+  - web-ingress.yaml
+  - seed-job.yaml

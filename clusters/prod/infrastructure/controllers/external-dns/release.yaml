@@ -31,6 +31,7 @@ spec:
       - cpdevlab.com
       - christosploutarchou.com
       - cploutarchou.com
+      - gvasiliourolex.com.cy
     policy: sync
     txtOwnerId: k3s-prod
     extraArgs:
