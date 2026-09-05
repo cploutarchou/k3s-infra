@@ -1,5 +1,5 @@
 ---
-# Next.js standalone app (github.com/cploutarchou/my-personal-website).
+# Go + Gin binary (github.com/cploutarchou/my-personal-website, 0.4.0).
 # Image is side-loaded on all three nodes under this digest via
 # ansible/playbooks/30-sideload-image.yml (no registry pull path yet — see
 # docs/decisions.md); imagePullPolicy stays IfNotPresent.
@@ -21,10 +21,11 @@ spec:
         app.kubernetes.io/name: website
     spec:
       initContainers:
-        # Applies committed Prisma migrations before the app starts. Safe
-        # with replicas: 1; revisit (migration Job) if replicas grow.
+        # Runs `/app/migrate up` (goose; the Prisma history is baselined on
+        # first run) before the app starts. Safe with replicas: 1; revisit
+        # (migration Job) if replicas grow.
         - name: migrate
-          image: ghcr.io/cploutarchou/personal-website-migrate:0.3.1@sha256:7e4f67f5f6531b079f9acbca020b15c9ce41bd0623ee1eacad02692110c6d0ee
+          image: ghcr.io/cploutarchou/personal-website-migrate:0.4.0@sha256:3da6c21f87dec9711fd6356a587d0038a32ef14233182593ba6a7acc758a4c8b
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
@@ -37,7 +38,7 @@ spec:
               memory: 512Mi
       containers:
         - name: web
-          image: ghcr.io/cploutarchou/personal-website:0.3.1@sha256:20da7af99788c18088fd1ccf0f19d520f565821c5bbde1aa2329e17b4aa3da5b
+          image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -53,6 +54,12 @@ spec:
               value: "49656626"
             - name: ADMIN_GITHUB_LOGIN
               value: cploutarchou
+            # Read at runtime by the Go server (build arguments of the former
+            # Next.js image).
+            - name: NEXT_PUBLIC_X_PROFILE_URL
+              value: https://x.com/CPloutarchou
+            - name: NEXT_PUBLIC_FACEBOOK_PROFILE_URL
+              value: https://www.facebook.com/profile.php?id=100085180671631
           envFrom:
             - secretRef:
                 name: website
