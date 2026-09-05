@@ -55,11 +55,11 @@ pod restart. Change the generator and open a PR instead.
 
 ## Known gaps
 
-- VictoriaMetrics cannot scrape host endpoints (node-exporter, kubelet,
-  cadvisor, etcd) on the node it runs on: pod traffic to the node's own vLAN
-  IP arrives on `cni0` with a pod source address, and the nftables input chain
-  only accepts `iifname eth1 ip saddr 10.0.0.0/24`. Fix belongs in
-  `ansible/roles/nftables` and is a firewall change (needs operator sign-off).
+- VictoriaMetrics scrapes host endpoints on the node it runs on through the
+  CNI bridge with a pod source address. `ansible/roles/nftables` accepts
+  that traffic from `k3s_cluster_cidr` on `cni_iface` for
+  `pod_to_host_tcp_ports` only. Re-run `playbooks/10-network.yml` after
+  changing those variables.
 - The apps expose no `/metrics`; HTTP panels use Traefik's service metrics.
 - k3s etcd snapshot uploads to R2 are not exposed as metrics; check with
   `k3s etcd-snapshot ls` on a node.
