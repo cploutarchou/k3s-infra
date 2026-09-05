@@ -19,6 +19,10 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: website
+      annotations:
+        # Bump to roll the pod after a change to the website secret
+        # (envFrom does not restart pods on its own).
+        website/secret-revision: "2026-09-05.1"
     spec:
       initContainers:
         # Runs `/app/migrate up` (goose; the Prisma history is baselined on
