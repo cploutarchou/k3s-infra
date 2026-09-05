@@ -2,10 +2,16 @@
 # One-shot seed of the gvasiliourolex database (src/db/seed.ts). Upserts
 # by fixed ids, so a re-run is safe. The Job is kept in git as a record of
 # the bootstrap. Bump the suffix to re-run — a completed Job is immutable.
+#
+# seed-1 exhausted its retries racing the CNPG Database CR (the database
+# didn't exist yet on first apply); the migrate initContainer hit the same
+# race but recovered on its own retries. No dependency ordering exists
+# between a CNPG Database and a Job/initContainer that needs it — this is
+# expected on the very first apply of a new app.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: gvasiliourolex-seed-1
+  name: gvasiliourolex-seed-2
   namespace: gvasiliourolex
 spec:
   backoffLimit: 2
