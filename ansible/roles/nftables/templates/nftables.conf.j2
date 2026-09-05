@@ -5,7 +5,11 @@
 # kube-vip all ride eth1. INPUT-only filtering; kube-proxy/flannel manage
 # their own forwarding chains, so forward stays accept.
 
-flush ruleset
+# Replace only our own table. `flush ruleset` would also wipe the iptables-nft
+# tables kube-proxy and flannel maintain (ip nat, ip filter, mangle), breaking
+# Service routing on the node until they resync.
+add table inet filter
+delete table inet filter
 
 table inet filter {
   chain input {
@@ -21,6 +25,11 @@ table inet filter {
 
     # Cluster vLAN: trust everything from cluster peers on eth1
     iifname "{{ vlan_iface }}" ip saddr {{ vlan_cidr }} accept
+
+    # Pods on this node -> this node's host ports (arrive on the CNI bridge
+    # with a pod source address; not masqueraded, so the vLAN rule misses).
+    # Needed for VictoriaMetrics to scrape the node it is scheduled on.
+    iifname "{{ cni_iface }}" ip saddr {{ k3s_cluster_cidr }} tcp dport { {{ pod_to_host_tcp_ports | join(', ') }} } accept
 
     # Public: SSH, HTTP, HTTPS only
     tcp dport 22 accept
