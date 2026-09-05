@@ -1,0 +1,18 @@
+---
+# Local media storage (MEDIA_STORAGE_DRIVER=local). local-path binds the
+# pod to whichever node the volume is provisioned on; acceptable with
+# replicas: 1, but it means losing that node takes the site down until it
+# returns (unlike the stateless website app). Move to
+# MEDIA_STORAGE_DRIVER=s3 (R2) if that becomes a problem.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gvasiliourolex-media
+  namespace: gvasiliourolex
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
