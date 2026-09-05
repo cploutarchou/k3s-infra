@@ -1,7 +1,7 @@
 ---
 # Scheduled publishing + GitHub/package sync. Both hit the app's own API
 # over the cluster network using the shared CRON_SECRET; the runtime image
-# is reused (node fetch) so no extra image needs side-loading.
+# is reused (its /app/cron binary) so no extra image needs side-loading.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -22,18 +22,13 @@ spec:
           restartPolicy: Never
           containers:
             - name: publish
-              image: ghcr.io/cploutarchou/personal-website:0.3.1@sha256:20da7af99788c18088fd1ccf0f19d520f565821c5bbde1aa2329e17b4aa3da5b
+              image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
               imagePullPolicy: IfNotPresent
               command:
-                - node
-                - -e
-                - |
-                  fetch('http://website.website.svc/api/cron/publish-scheduled', {
-                    headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-                  }).then((r) => {
-                    console.log('publish-scheduled', r.status)
-                    if (!r.ok) process.exit(1)
-                  }).catch((e) => { console.error(e); process.exit(1) })
+                - /app/cron
+                - --base
+                - http://website.website.svc
+                - publish-scheduled
               env:
                 - name: CRON_SECRET
                   valueFrom:
@@ -67,23 +62,13 @@ spec:
           restartPolicy: Never
           containers:
             - name: sync
-              image: ghcr.io/cploutarchou/personal-website:0.3.1@sha256:20da7af99788c18088fd1ccf0f19d520f565821c5bbde1aa2329e17b4aa3da5b
+              image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
               imagePullPolicy: IfNotPresent
               command:
-                - node
-                - -e
-                - |
-                  const call = async (path) => {
-                    const r = await fetch(`http://website.website.svc${path}`, {
-                      method: 'POST',
-                      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
-                    })
-                    console.log(path, r.status)
-                    return r.ok
-                  }
-                  Promise.all([call('/api/sync/github'), call('/api/sync/packages')])
-                    .then((oks) => { if (oks.includes(false)) process.exit(1) })
-                    .catch((e) => { console.error(e); process.exit(1) })
+                - /app/cron
+                - --base
+                - http://website.website.svc
+                - sync
               env:
                 - name: CRON_SECRET
                   valueFrom:
