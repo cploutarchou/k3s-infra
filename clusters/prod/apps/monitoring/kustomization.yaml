@@ -10,3 +10,16 @@ resources:
   - grafana-admin-secret.sops.yaml
   - grafana.yaml
   - uptime-kuma.yaml
+
+# Custom Grafana dashboards (see scripts/gen-dashboards.py). Fixed name so
+# the HelmRelease can reference it via dashboardsConfigMaps.
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: grafana-dashboards-custom
+    namespace: monitoring
+    files:
+      - dashboards/cluster-overview.json
+      - dashboards/platform.json
+      - dashboards/databases.json
+      - dashboards/applications.json
