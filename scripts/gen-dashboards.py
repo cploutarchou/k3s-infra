@@ -303,8 +303,13 @@ databases = dashboard("k3s-databases", "k3s Databases (CNPG) and Backups", [
 # --------------------------------------------------------------------------
 # 4. Applications (templated per namespace/app)
 # --------------------------------------------------------------------------
-app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(website|gvasiliourolex|mcp|monitoring)$/", multi=False, label="application")
+app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(executionlab-staging|website|gvasiliourolex|mcp|monitoring)$/", multi=False, label="application")
 app_var["current"] = {"selected": True, "text": "website", "value": "website"}
+# Database names do not always equal the namespace (executionlab-staging owns
+# executionlab_staging_platform and executionlab_staging_bot), so the CNPG
+# panels select databases through their own variable instead of reusing $app.
+db_var = var_query("db", "label_values(cnpg_pg_database_size_bytes, datname)",
+                   regex="/^(website|gvasiliourolex|executionlab_staging_.*)$/", multi=True, label="database")
 SVC = 'service=~"$app-.*@kubernetes"'
 LIMIT_OVER = [{"matcher": {"id": "byRegexp", "options": ".*limit.*"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
               {"matcher": {"id": "byRegexp", "options": ".*request.*"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dot", "dash": [2, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}]
@@ -367,20 +372,20 @@ applications = dashboard("k3s-applications", "k3s Applications", [
           rename={"Value": "failed pods", "job_name": "job"}, w=12, h=7),
     table("CronJob schedule", 'kube_cronjob_info{namespace="$app"}', exclude=("Value", "namespace", "concurrency_policy"), w=12, h=7),
 
-    row("Database (CNPG, datname = $app) and storage"),
-    stat("DB connections", 'sum(cnpg_backends_total{job="cnpg",datname="$app"})', th=thresholds(("green", None), ("orange", 40), ("red", 80)), w=4),
-    stat("DB size", 'max(cnpg_pg_database_size_bytes{job="cnpg",datname="$app"})', unit="bytes", th=thresholds(("green", None)), w=4),
-    stat("Commits/s", 'sum(rate(cnpg_pg_stat_database_xact_commit{job="cnpg",datname="$app"}[5m]))', th=thresholds(("green", None)), w=4),
-    stat("Deadlocks (24h)", 'sum(increase(cnpg_pg_stat_database_deadlocks{job="cnpg",datname="$app"}[24h])) or vector(0)', th=GREEN_RED(1), w=4),
-    stat("Cache hit ratio", 'sum(rate(cnpg_pg_stat_database_blks_hit{job="cnpg",datname="$app"}[5m])) / (sum(rate(cnpg_pg_stat_database_blks_hit{job="cnpg",datname="$app"}[5m])) + sum(rate(cnpg_pg_stat_database_blks_read{job="cnpg",datname="$app"}[5m])))', unit=PCT, th=thresholds(("red", None), ("orange", 0.9), ("green", 0.99)), w=4),
+    row("Database (CNPG, datname = $db) and storage"),
+    stat("DB connections", 'sum(cnpg_backends_total{job="cnpg",datname=~"$db"})', th=thresholds(("green", None), ("orange", 40), ("red", 80)), w=4),
+    stat("DB size", 'max(cnpg_pg_database_size_bytes{job="cnpg",datname=~"$db"})', unit="bytes", th=thresholds(("green", None)), w=4),
+    stat("Commits/s", 'sum(rate(cnpg_pg_stat_database_xact_commit{job="cnpg",datname=~"$db"}[5m]))', th=thresholds(("green", None)), w=4),
+    stat("Deadlocks (24h)", 'sum(increase(cnpg_pg_stat_database_deadlocks{job="cnpg",datname=~"$db"}[24h])) or vector(0)', th=GREEN_RED(1), w=4),
+    stat("Cache hit ratio", 'sum(rate(cnpg_pg_stat_database_blks_hit{job="cnpg",datname=~"$db"}[5m])) / (sum(rate(cnpg_pg_stat_database_blks_hit{job="cnpg",datname=~"$db"}[5m])) + sum(rate(cnpg_pg_stat_database_blks_read{job="cnpg",datname=~"$db"}[5m])))', unit=PCT, th=thresholds(("red", None), ("orange", 0.9), ("green", 0.99)), w=4),
     stat("PVC usage (max in $app)", 'max(kubelet_volume_stats_used_bytes{job="kubelet",namespace="$app"} / kubelet_volume_stats_capacity_bytes{job="kubelet",namespace="$app"})', unit=PCT, th=thresholds(("green", None), ("orange", 0.7), ("red", 0.85)), w=4),
     ts("DB connections and size", [
-        target('sum(cnpg_backends_total{job="cnpg",datname="$app"})', "connections"),
-        target('max(cnpg_pg_database_size_bytes{job="cnpg",datname="$app"})', "size"),
+        target('sum(cnpg_backends_total{job="cnpg",datname=~"$db"})', "connections"),
+        target('max(cnpg_pg_database_size_bytes{job="cnpg",datname=~"$db"})', "size"),
     ], w=12, h=7, over=[{"matcher": {"id": "byName", "options": "size"}, "properties": [{"id": "unit", "value": "bytes"}, {"id": "custom.axisPlacement", "value": "right"}]}]),
     ts("PVC usage in $app", [target('kubelet_volume_stats_used_bytes{job="kubelet",namespace="$app"} / kubelet_volume_stats_capacity_bytes{job="kubelet",namespace="$app"}', "{{persistentvolumeclaim}}")],
        unit=PCT, fc={"min": 0, "max": 1}, w=12, h=7),
-], variables=[app_var])
+], variables=[app_var, db_var])
 
 for name, d in [("cluster-overview", cluster), ("platform", platform), ("databases", databases), ("applications", applications)]:
     path = os.path.join(OUT, f"{name}.json")

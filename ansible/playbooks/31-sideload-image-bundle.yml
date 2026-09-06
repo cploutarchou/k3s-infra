@@ -1,0 +1,77 @@
+---
+# Side-load a MULTI-IMAGE tar into k3s containerd on every node, registering
+# each image under both its tag and its digest reference.
+#
+# Same interim path as 30-sideload-image.yml (the operator's PAT still has no
+# packages scope — docs/decisions.md), but for an application whose images
+# share most of their layers: `docker save` of the whole set deduplicates
+# them, so one ~1 GB bundle replaces five separate multi-GB transfers.
+#
+#   ansible-playbook playbooks/31-sideload-image-bundle.yml \
+#     -e sideload_tar=/path/to/bundle.tar \
+#     -e '{"sideload_images":["ghcr.io/owner/app/a:tag","ghcr.io/owner/app/b:tag"]}'
+#
+# Retire together with 30-sideload-image.yml once the registry pull path works.
+- name: Side-load a container image bundle into k3s containerd
+  hosts: k3s_cluster
+  any_errors_fatal: true
+  vars:
+    sideload_tar: ""
+    sideload_images: []
+  tasks:
+    - name: Require tar and image list
+      ansible.builtin.assert:
+        that:
+          - sideload_tar | length > 0
+          - sideload_images | length > 0
+        fail_msg: pass -e sideload_tar=... and -e '{"sideload_images":[...]}'
+
+    - name: Ensure the containerd work directory exists
+      # Debian 13 mounts /tmp as tmpfs; staging a ~1 GB tar there would
+      # compete with workloads for RAM (see CLAUDE.md).
+      ansible.builtin.file:
+        path: /var/lib/rancher/tmp
+        state: directory
+        mode: "0700"
+
+    - name: Copy image bundle to node
+      ansible.builtin.copy:
+        src: "{{ sideload_tar }}"
+        dest: /var/lib/rancher/tmp/sideload-bundle.tar
+        mode: "0600"
+
+    - name: Import bundle into containerd (k8s.io namespace)
+      ansible.builtin.command: k3s ctr images import /var/lib/rancher/tmp/sideload-bundle.tar
+      changed_when: true
+
+    - name: Read the manifest digest containerd assigned to each image
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        k3s ctr images ls name=={{ item }} | awk 'NR==2 {print $3}'
+      args:
+        executable: /bin/bash
+      loop: "{{ sideload_images }}"
+      register: sideload_digests
+      changed_when: false
+      failed_when: "'sha256:' not in sideload_digests.stdout | default('')"
+
+    - name: Register the digest reference alongside the tag
+      ansible.builtin.command: >-
+        k3s ctr images tag --force {{ item.item }}
+        {{ item.item | regex_replace(':[^:]+$', '') }}@{{ item.stdout }}
+      loop: "{{ sideload_digests.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      changed_when: true
+
+    - name: Remove the bundle from the node
+      ansible.builtin.file:
+        path: /var/lib/rancher/tmp/sideload-bundle.tar
+        state: absent
+
+    - name: Report digests
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ item.item }} -> {{ item.stdout }}"
+      loop: "{{ sideload_digests.results }}"
+      loop_control:
+        label: "{{ item.item }}"

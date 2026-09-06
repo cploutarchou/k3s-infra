@@ -1,0 +1,29 @@
+---
+# Two declarative databases on the shared CNPG cluster (one per data owner —
+# see CLAUDE.md; no ad-hoc database containers). The platform database is
+# backend-owned and holds the authoritative command/run tables; the bot
+# database holds the Python runtime's own schema. Both are owned by the
+# `executionlab_staging` managed role declared on the Cluster spec
+# (infrastructure/configs/postgres/cluster.yaml); its password lives in
+# executionlab-staging-db-credentials.sops.yaml in the databases namespace.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: executionlab-staging-platform
+  namespace: databases
+spec:
+  cluster:
+    name: postgres
+  name: executionlab_staging_platform
+  owner: executionlab_staging
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: executionlab-staging-bot
+  namespace: databases
+spec:
+  cluster:
+    name: postgres
+  name: executionlab_staging_bot
+  owner: executionlab_staging

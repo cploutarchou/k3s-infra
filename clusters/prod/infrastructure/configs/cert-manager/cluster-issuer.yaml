@@ -21,6 +21,7 @@ spec:
             - christosploutarchou.com
             - cploutarchou.com
             - gvasiliourolex.com.cy
+            - executionlab.io
 ---
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
@@ -44,3 +45,4 @@ spec:
             - christosploutarchou.com
             - cploutarchou.com
             - gvasiliourolex.com.cy
+            - executionlab.io

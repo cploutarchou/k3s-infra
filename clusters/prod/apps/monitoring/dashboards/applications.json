@@ -35,7 +35,30 @@
      "value": "website"
     },
     "sort": 1,
-    "regex": "/^(website|gvasiliourolex|mcp|monitoring)$/"
+    "regex": "/^(executionlab-staging|website|gvasiliourolex|mcp|monitoring)$/"
+   },
+   {
+    "name": "db",
+    "label": "database",
+    "type": "query",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "victoriametrics"
+    },
+    "refresh": 2,
+    "query": {
+     "query": "label_values(cnpg_pg_database_size_bytes, datname)",
+     "refId": "db"
+    },
+    "includeAll": true,
+    "multi": true,
+    "current": {
+     "selected": true,
+     "text": "All",
+     "value": "$__all"
+    },
+    "sort": 1,
+    "regex": "/^(website|gvasiliourolex|executionlab_staging_.*)$/"
    }
   ]
  },
@@ -1571,7 +1594,7 @@
   },
   {
    "type": "row",
-   "title": "Database (CNPG, datname = $app) and storage",
+   "title": "Database (CNPG, datname = $db) and storage",
    "collapsed": false,
    "gridPos": {
     "w": 24,
@@ -1601,7 +1624,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(cnpg_backends_total{job=\"cnpg\",datname=\"$app\"})",
+     "expr": "sum(cnpg_backends_total{job=\"cnpg\",datname=~\"$db\"})",
      "refId": "A"
     }
    ],
@@ -1658,7 +1681,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "max(cnpg_pg_database_size_bytes{job=\"cnpg\",datname=\"$app\"})",
+     "expr": "max(cnpg_pg_database_size_bytes{job=\"cnpg\",datname=~\"$db\"})",
      "refId": "A"
     }
    ],
@@ -1708,7 +1731,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{job=\"cnpg\",datname=\"$app\"}[5m]))",
+     "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{job=\"cnpg\",datname=~\"$db\"}[5m]))",
      "refId": "A"
     }
    ],
@@ -1757,7 +1780,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(increase(cnpg_pg_stat_database_deadlocks{job=\"cnpg\",datname=\"$app\"}[24h])) or vector(0)",
+     "expr": "sum(increase(cnpg_pg_stat_database_deadlocks{job=\"cnpg\",datname=~\"$db\"}[24h])) or vector(0)",
      "refId": "A"
     }
    ],
@@ -1810,7 +1833,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(rate(cnpg_pg_stat_database_blks_hit{job=\"cnpg\",datname=\"$app\"}[5m])) / (sum(rate(cnpg_pg_stat_database_blks_hit{job=\"cnpg\",datname=\"$app\"}[5m])) + sum(rate(cnpg_pg_stat_database_blks_read{job=\"cnpg\",datname=\"$app\"}[5m])))",
+     "expr": "sum(rate(cnpg_pg_stat_database_blks_hit{job=\"cnpg\",datname=~\"$db\"}[5m])) / (sum(rate(cnpg_pg_stat_database_blks_hit{job=\"cnpg\",datname=~\"$db\"}[5m])) + sum(rate(cnpg_pg_stat_database_blks_read{job=\"cnpg\",datname=~\"$db\"}[5m])))",
      "refId": "A"
     }
    ],
@@ -1926,7 +1949,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(cnpg_backends_total{job=\"cnpg\",datname=\"$app\"})",
+     "expr": "sum(cnpg_backends_total{job=\"cnpg\",datname=~\"$db\"})",
      "refId": "A",
      "legendFormat": "connections"
     },
@@ -1935,7 +1958,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "max(cnpg_pg_database_size_bytes{job=\"cnpg\",datname=\"$app\"})",
+     "expr": "max(cnpg_pg_database_size_bytes{job=\"cnpg\",datname=~\"$db\"})",
      "refId": "B",
      "legendFormat": "size"
     }
