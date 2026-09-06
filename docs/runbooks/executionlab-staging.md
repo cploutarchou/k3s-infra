@@ -90,16 +90,45 @@ password is set explicitly, `PasswordChangeRequired` is false — rotation is
 manual. To force a new password, set `BOOTSTRAP_ADMIN_RESET_PASSWORD=true`
 alongside a new `BOOTSTRAP_ADMIN_PASSWORD` and roll the backend.
 
-## Known zone defects (not fixed here)
+## Zone notes
 
 - `app`, `crm` and `ib` each have a single A record pointing at k3s-01 only,
   while `api`, `staging` and the apex have all three. They are the app's
   production portal hosts (`Dockerfile.frontend` build args) and nothing
   serves them yet.
-- Two SPF TXT records on the apex. RFC 7208 allows one, so both are ignored by
-  verifiers. One is Cloudflare Email Routing's; the other,
-  `v=spf1 ip4:159.195.82.201 include:executionlab.io ~all`, also includes
-  itself, which is a resolution loop.
+## SPF records lost during this deployment — unexplained
+
+The apex carried two SPF TXT records before this work:
+
+    v=spf1 include:_spf.mx.cloudflare.net ~all           (Cloudflare Email Routing)
+    v=spf1 ip4:159.195.82.201 include:executionlab.io ~all
+
+Both were gone from Cloudflare and from public DNS by the end of the
+deployment. No delete was issued against them: the only writes were three
+record creations and three updates, all scoped to `api.staging`. The
+`external-dns` logs contain no mention of the zone, which matches its
+`domainFilters`. The cert-manager logs show only issuance for the two staging
+hosts and no deletions.
+
+Circumstantially, this deployment was the first time cert-manager solved
+DNS-01 in this zone (`executionlab.io` was added to the ClusterIssuer
+`dnsZones` here), and its Cloudflare solver does list and delete TXT records
+during challenge cleanup. That is a hypothesis, not a finding — **causation
+was not established.** The zone-scoped API token cannot read the account audit
+log; the Cloudflare dashboard (Manage Account → Audit Log) will name the
+actor.
+
+The Cloudflare Email Routing SPF record has been recreated with its original
+content. The second one was deliberately not recreated: two SPF records is
+invalid under RFC 7208 so neither was being honoured, and it also included
+itself, which is a resolution loop. Recreate it only if something genuinely
+needs to send mail from 159.195.82.201, and then merge it into the single
+record rather than adding a second.
+
+Watch this zone's TXT records across the next certificate renewal (roughly
+60 days) to see whether they disappear again.
+
+## Other known zone defects (not fixed here)
 
 Cloudflare Email Routing (MX, DKIM, DMARC) is live on this zone. `external-dns`
 deliberately does **not** manage `executionlab.io` — its policy is `sync` —
