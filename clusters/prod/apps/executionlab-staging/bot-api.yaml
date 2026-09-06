@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: bot-api
-          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-600a24c2@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c8ae4cbe@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
