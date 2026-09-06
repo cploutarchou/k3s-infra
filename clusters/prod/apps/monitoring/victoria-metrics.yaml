@@ -19,6 +19,10 @@ spec:
     server:
       fullnameOverride: vmsingle
       retentionPeriod: "30d"
+      # Re-read the scrape ConfigMap periodically; without this a scrape
+      # config change in git is only picked up when the pod restarts.
+      extraArgs:
+        promscrape.configCheckInterval: 1m
       persistentVolume:
         enabled: true
         storageClassName: local-path
