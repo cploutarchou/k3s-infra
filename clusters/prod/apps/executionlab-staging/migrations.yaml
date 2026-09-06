@@ -1,0 +1,73 @@
+---
+# Schema changes run as explicit Jobs, never on application startup
+# (DB_AUTO_MIGRATE stays false in the ConfigMap). The job name carries the
+# app commit so a new revision creates a new Job rather than colliding with
+# the completed, immutable one.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backend-migrate-600a24c2
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: backend-migrate
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/cploutarchou/dydx-trading-bot/backend-migrator:staging-600a24c2@sha256:725de66be622b1b5bb6bd10676864044631260d69ed529dd8a3c95a7298fd431
+          imagePullPolicy: IfNotPresent
+          args: ["up"]
+          envFrom:
+            - configMapRef:
+                name: executionlab-config
+            - secretRef:
+                name: executionlab-staging
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+---
+# Alembic lives in the bot image already (bot/alembic.ini + bot/migrations,
+# alembic==1.18.5 in requirements.txt), so the bot API image doubles as the
+# bot migrator — no separate image to build or side-load.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bot-migrate-600a24c2
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: bot-migrate
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bot-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-600a24c2@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: executionlab-config
+            - secretRef:
+                name: executionlab-staging
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

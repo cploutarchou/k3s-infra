@@ -1,0 +1,79 @@
+---
+# Python trading runtime API (bot/, :8889). Reached only by the backend —
+# the frontend never talks to it directly (strict frontend -> backend -> bot
+# boundary), so it has no Ingress.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bot-api
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: bot-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bot-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bot-api
+      annotations:
+        executionlab/secret-revision: "2026-09-06.1"
+    spec:
+      containers:
+        - name: bot-api
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-600a24c2@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8889
+          envFrom:
+            - configMapRef:
+                name: executionlab-config
+            - secretRef:
+                name: executionlab-staging
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            failureThreshold: 5
+          volumeMounts:
+            - name: artifacts
+              mountPath: /var/lib/dydx/backtest-artifacts
+            - name: states
+              mountPath: /app/bot_states
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: 800m
+              memory: 768Mi
+      volumes:
+        - name: artifacts
+          emptyDir: {}
+        - name: states
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bot-api
+  namespace: executionlab-staging
+spec:
+  selector:
+    app.kubernetes.io/name: bot-api
+  ports:
+    - name: http
+      port: 8889
+      targetPort: http

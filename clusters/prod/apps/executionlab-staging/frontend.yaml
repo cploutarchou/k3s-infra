@@ -1,0 +1,55 @@
+---
+# nginx serving the built React bundle. The stock image needs no staging
+# rebuild: frontend/src/api/origin.ts classifies staging.executionlab.io as
+# the staging environment, rejects the build-time production API base for
+# that environment, and falls through to https://api.staging.executionlab.io.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: ghcr.io/cploutarchou/dydx-trading-bot/frontend:staging-600a24c2@sha256:d37cbe37bf067f51113b61adf2f8f51730611b92d81515180f1f9c19aa47e19d
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 96Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: executionlab-staging
+spec:
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

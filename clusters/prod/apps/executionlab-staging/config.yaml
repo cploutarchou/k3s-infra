@@ -1,0 +1,83 @@
+---
+# Non-secret service discovery and feature flags for the staging deployment.
+# Credentials are never here — they live in executionlab-staging-secret.sops.yaml.
+#
+# Trimmed against the app's own deploy/k8s-next/platform-config.yaml contract:
+#   - PgBouncer dropped; workloads talk to the CNPG postgres-rw service directly.
+#   - ClickHouse dropped (BACKTEST_CLICKHOUSE_WRITES_ENABLED is false upstream).
+#   - MinIO dropped; backtest artifacts use the local filesystem fallback.
+#   - NATS disabled; the backend's publisher dials lazily, so nothing breaks
+#     at boot and Celery remains the authoritative backtest executor.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: executionlab-config
+  namespace: executionlab-staging
+data:
+  APP_ENV: staging
+  ENVIRONMENT: staging
+  GIN_MODE: release
+  LOG_LEVEL: info
+
+  # Public origins. The frontend bundle resolves its API base from the browser
+  # hostname (frontend/src/api/origin.ts): on staging.executionlab.io it only
+  # accepts https://api.staging.executionlab.io, so these two hosts are a
+  # hard requirement of the app, not a preference.
+  FRONTEND_PUBLIC_ORIGIN: https://staging.executionlab.io
+  BACKEND_PUBLIC_ORIGIN: https://api.staging.executionlab.io
+  FRONTEND_URL: https://staging.executionlab.io
+  CORS_ALLOWED_ORIGINS: https://staging.executionlab.io
+
+  # In-cluster service wiring
+  BACKEND_BASE_URL: http://backend:8888
+  BOT_API_BASE_URL: http://bot-api:8889
+  API_PORT: "8888"
+
+  # Postgres (shared CNPG cluster, direct to the primary service)
+  DB_TYPE: postgres
+  BOT_DB_TYPE: postgres
+  DB_HOST: postgres-rw.databases.svc.cluster.local
+  DB_PORT: "5432"
+  DB_NAME: executionlab_staging_platform
+  BOT_DB_HOST: postgres-rw.databases.svc.cluster.local
+  BOT_DB_PORT: "5432"
+  BOT_DB_NAME: executionlab_staging_bot
+  DATABASE_SERVICE_HOST: postgres-rw.databases.svc.cluster.local
+  DATABASE_SERVICE_PORT: "5432"
+  DATABASE_NAME: executionlab_staging_platform
+  BOT_DATABASE_NAME: executionlab_staging_bot
+  POSTGRES_HOST: postgres-rw.databases.svc.cluster.local
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: executionlab_staging_platform
+
+  # Task tables are backend-owned and live in the platform database — do not
+  # point these at the bot database (see the upstream platform-config note).
+  TASK_DB_HOST: postgres-rw.databases.svc.cluster.local
+  TASK_DB_PORT: "5432"
+  TASK_DB_NAME: executionlab_staging_platform
+
+  # Schema changes run as explicit Jobs, never on application startup.
+  DB_AUTO_MIGRATE: "false"
+
+  # Valkey (Celery broker + result backend, cache)
+  REDIS_HOST: valkey
+  REDIS_PORT: "6379"
+  REDIS_URL: redis://valkey:6379/0
+  VALKEY_HOST: valkey
+  VALKEY_PORT: "6379"
+  VALKEY_URL: redis://valkey:6379/0
+  CELERY_BROKER_URL: redis://valkey:6379/1
+  CELERY_RESULT_BACKEND: redis://valkey:6379/2
+
+  # Disabled subsystems
+  NATS_ENABLED: "false"
+  BACKTEST_CLICKHOUSE_WRITES_ENABLED: "false"
+  BACKTEST_MINIO_ARTIFACTS_ENABLED: "false"
+  BACKTEST_ARTIFACT_STORAGE_ENABLED: "true"
+  BACKTEST_ARTIFACTS_DIR: /var/lib/dydx/backtest-artifacts
+  BACKTEST_HEARTBEAT_KEEPALIVE_SECONDS: "30"
+
+  # Celery consumes only the backtest/market-sync queues. Neither registered
+  # task places an exchange order (bot/src/infrastructure/workers/*).
+  CELERY_QUEUES: backtests,default,scheduled
+  CELERY_CONCURRENCY: "2"

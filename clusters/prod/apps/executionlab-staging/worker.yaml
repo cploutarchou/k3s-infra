@@ -1,0 +1,67 @@
+---
+# Celery worker. It registers exactly two tasks — bot.sync_market_candles
+# (market data ingest) and the backtest task
+# (bot/src/infrastructure/workers/{market_sync,backtest}_tasks.py). Neither
+# places, modifies, or cancels an exchange order: live execution runs in the
+# per-instance runtime (bot/src/main_instance.py), which is started only from
+# the bot API and reads its credentials and is_testnet flag from the database.
+# CELERY_QUEUES is pinned in the ConfigMap so the worker cannot pick up a
+# queue added later without a manifest change.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+      annotations:
+        executionlab/secret-revision: "2026-09-06.1"
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/cploutarchou/dydx-trading-bot/worker:staging-600a24c2@sha256:1cb427f7262c1d73ee4fa48c55a6128dc1e8ed79f8b95cf93b45a043d270c4ef
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: executionlab-config
+            - secretRef:
+                name: executionlab-staging
+          # The image bakes APP_ENV=prod; the ConfigMap above overrides it to
+          # staging, which is what puts the Go baseline and this runtime on the
+          # same environment label.
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -ec
+                - celery -A src.infrastructure.workers.celery_app inspect ping -d celery@$HOSTNAME
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 4
+          volumeMounts:
+            - name: artifacts
+              mountPath: /var/lib/dydx/backtest-artifacts
+            - name: states
+              mountPath: /app/bot_states
+          resources:
+            requests:
+              cpu: 150m
+              memory: 384Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+      volumes:
+        - name: artifacts
+          emptyDir: {}
+        - name: states
+          emptyDir: {}

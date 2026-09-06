@@ -1,0 +1,60 @@
+---
+# Two hosts, because the frontend bundle requires them: origin.ts only
+# accepts https://api.staging.executionlab.io as the API base when the
+# browser is on staging.executionlab.io. Path-based single-host routing is
+# rejected by that allowlist, so this split is a hard app requirement.
+#
+# external-dns does NOT manage executionlab.io (it is absent from
+# domainFilters, deliberately — the zone carries live Cloudflare Email
+# Routing records and policy is `sync`). Both A records are managed by hand.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  namespace: executionlab-staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/exclude: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - staging.executionlab.io
+      secretName: staging-executionlab-io-tls
+  rules:
+    - host: staging.executionlab.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend
+  namespace: executionlab-staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/exclude: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.staging.executionlab.io
+      secretName: api-staging-executionlab-io-tls
+  rules:
+    - host: api.staging.executionlab.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  name: http

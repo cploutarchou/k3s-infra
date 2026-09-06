@@ -45,6 +45,11 @@ spec:
         login: true
         passwordSecret:
           name: gvasiliourolex-db-credentials
+      - name: executionlab_staging
+        ensure: present
+        login: true
+        passwordSecret:
+          name: executionlab-staging-db-credentials
 
   postgresql:
     parameters:
