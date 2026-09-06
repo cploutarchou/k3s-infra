@@ -1,11 +1,15 @@
 ---
-# Two declarative databases on the shared CNPG cluster (one per data owner —
-# see CLAUDE.md; no ad-hoc database containers). The platform database is
-# backend-owned and holds the authoritative command/run tables; the bot
-# database holds the Python runtime's own schema. Both are owned by the
+# One declarative database on the shared CNPG cluster (one database per app —
+# see CLAUDE.md; no ad-hoc database containers), owned by the
 # `executionlab_staging` managed role declared on the Cluster spec
 # (infrastructure/configs/postgres/cluster.yaml); its password lives in
 # executionlab-staging-db-credentials.sops.yaml in the databases namespace.
+#
+# The backend and the Python bot runtime share this database: the bot resolves
+# its connection through BOT_DB_CUTOVER_MODE, which the app defaults to
+# "shared" (bot/src/infrastructure/database.py). A separate bot database is
+# only correct once that flag moves to "dedicated", which is the app's own
+# unfinished cutover — not something to pre-empt here.
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
 metadata:
@@ -15,15 +19,4 @@ spec:
   cluster:
     name: postgres
   name: executionlab_staging_platform
-  owner: executionlab_staging
----
-apiVersion: postgresql.cnpg.io/v1
-kind: Database
-metadata:
-  name: executionlab-staging-bot
-  namespace: databases
-spec:
-  cluster:
-    name: postgres
-  name: executionlab_staging_bot
   owner: executionlab_staging
