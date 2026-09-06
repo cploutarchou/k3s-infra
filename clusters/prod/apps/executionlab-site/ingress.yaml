@@ -1,0 +1,32 @@
+---
+# Serves the executionlab.io apex only. www has no DNS record in this zone
+# (unlike the other domains here), so it is deliberately not listed — adding
+# it would mean adding a DNS record nobody asked for.
+#
+# external-dns does not manage executionlab.io: the zone carries live
+# Cloudflare Email Routing records and the controller policy is `sync`.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: executionlab-site
+  namespace: executionlab-site
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/exclude: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - executionlab.io
+      secretName: executionlab-io-tls
+  rules:
+    - host: executionlab.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: executionlab-site
+                port:
+                  name: http

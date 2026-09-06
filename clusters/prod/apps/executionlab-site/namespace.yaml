@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: executionlab-site
+  labels:
+    app.kubernetes.io/name: executionlab-site
