@@ -19,7 +19,7 @@ spec:
       labels:
         app.kubernetes.io/name: bot-api
       annotations:
-        executionlab/secret-revision: "2026-09-06.1"
+        executionlab/secret-revision: "2026-09-06.2"
     spec:
       containers:
         - name: bot-api

@@ -31,6 +31,10 @@ data:
   # In-cluster service wiring
   BACKEND_BASE_URL: http://backend:8888
   BOT_API_BASE_URL: http://bot-api:8889
+  # internal/routes/*.go read BOT_API_URL and fall back to 127.0.0.1:8889.
+  # BOT_API_BASE_URL alone (as the upstream skeleton sets it) leaves the
+  # backend probing its own loopback and /ready stuck at 503.
+  BOT_API_URL: http://bot-api:8889
   API_PORT: "8888"
 
   # Postgres (shared CNPG cluster, direct to the primary service)
@@ -41,11 +45,11 @@ data:
   DB_NAME: executionlab_staging_platform
   BOT_DB_HOST: postgres-rw.databases.svc.cluster.local
   BOT_DB_PORT: "5432"
-  BOT_DB_NAME: executionlab_staging_bot
+  BOT_DB_NAME: executionlab_staging_platform
   DATABASE_SERVICE_HOST: postgres-rw.databases.svc.cluster.local
   DATABASE_SERVICE_PORT: "5432"
   DATABASE_NAME: executionlab_staging_platform
-  BOT_DATABASE_NAME: executionlab_staging_bot
+  BOT_DATABASE_NAME: executionlab_staging_platform
   POSTGRES_HOST: postgres-rw.databases.svc.cluster.local
   POSTGRES_PORT: "5432"
   POSTGRES_DB: executionlab_staging_platform
@@ -58,6 +62,10 @@ data:
 
   # Schema changes run as explicit Jobs, never on application startup.
   DB_AUTO_MIGRATE: "false"
+  # src/infrastructure/database.py defaults this to "shared", which routes
+  # the bot runtime at DATABASE_URL and ignores BOT_DATABASE_URL. Stated
+  # explicitly so the single-database layout is not an accident.
+  BOT_DB_CUTOVER_MODE: shared
 
   # Valkey (Celery broker + result backend, cache)
   REDIS_HOST: valkey
@@ -79,5 +87,16 @@ data:
 
   # Celery consumes only the backtest/market-sync queues. Neither registered
   # task places an exchange order (bot/src/infrastructure/workers/*).
+  # worker_entrypoint.py defaults WORKER_MODE to "bot", which runs main.py
+  # (the live trading runtime). This pins the container to the Celery worker.
+  WORKER_MODE: celery
   CELERY_QUEUES: backtests,default,scheduled
   CELERY_CONCURRENCY: "2"
+
+  # Execution safety, set explicitly rather than relying on defaults.
+  # BOT_PLACE_TRADES gates open_positions() in bot/main.py; IS_TESTNET keeps
+  # config validation on the testnet branch. Per-instance runtimes still read
+  # their own credentials and is_testnet flag from the database, and a fresh
+  # staging database has neither.
+  BOT_PLACE_TRADES: "false"
+  IS_TESTNET: "true"
