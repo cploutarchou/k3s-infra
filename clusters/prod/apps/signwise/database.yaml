@@ -1,0 +1,15 @@
+---
+# Declarative database on the shared CNPG cluster (one database per app —
+# see CLAUDE.md). The `signwise` role is a managed role on the Cluster spec
+# (infrastructure/configs/postgres/cluster.yaml); its password lives in
+# signwise-db-credentials.sops.yaml in the databases namespace.
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: signwise
+  namespace: databases
+spec:
+  cluster:
+    name: postgres
+  name: signwise
+  owner: signwise

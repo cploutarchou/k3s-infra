@@ -1,0 +1,90 @@
+---
+# Next.js 16 standalone server (github.com/cploutarchou/signwise, 1.0.0).
+# Images are side-loaded on all three nodes under these digests via
+# ansible/playbooks/31-sideload-image-bundle.yml (no registry pull path yet —
+# see docs/decisions.md); imagePullPolicy stays IfNotPresent.
+# NEXT_PUBLIC_SITE_URL is baked into the client bundle at build time, so a
+# hostname change means a rebuild, not just an env edit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signwise
+  namespace: signwise
+  labels:
+    app.kubernetes.io/name: signwise
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # RWO uploads volume
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: signwise
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: signwise
+    spec:
+      initContainers:
+        # `pnpm db:migrate` (drizzle migrator, ./drizzle SQL files) from the
+        # tools image. Safe with replicas: 1; move to a Job if replicas grow.
+        - name: migrate
+          image: ghcr.io/cploutarchou/signwise-tools:1.0.0@sha256:7c723c75449f961bc6677599e64e0e0789ca867b1d5c4aad04a55e128a3edd73
+          imagePullPolicy: IfNotPresent
+          args: ["db:migrate"]
+          envFrom:
+            - secretRef:
+                name: signwise
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+      containers:
+        - name: web
+          image: ghcr.io/cploutarchou/signwise:1.0.0@sha256:a50dd19f8f53278057139583c168d5c625640d885eab9085d7e4c43aafbe5ac0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_SITE_URL
+              value: https://signwise.cpdevlab.com
+            # Enquiry notifications are logged, not sent, until an email
+            # provider is wired (EMAIL_PROVIDER=resend + RESEND_API_KEY in
+            # the signwise secret; cpdevlab.com is already verified on Resend).
+            - name: EMAIL_PROVIDER
+              value: console
+            - name: EMAIL_FROM
+              value: Signwise <no-reply@cpdevlab.com>
+            - name: MEDIA_STORAGE
+              value: local
+            - name: UPLOAD_DIR
+              value: /app/uploads
+            - name: LOG_LEVEL
+              value: info
+          envFrom:
+            - secretRef:
+                name: signwise
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          # /api/health runs `select 1`, so readiness also gates on the
+          # database being reachable and migrated.
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: signwise-uploads

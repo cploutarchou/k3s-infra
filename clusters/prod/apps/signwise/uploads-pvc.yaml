@@ -1,0 +1,17 @@
+---
+# CMS media uploads (MEDIA_STORAGE=local, served through /api/media). Same
+# trade-off as gvasiliourolex: local-path pins the pod to one node, so
+# losing that node takes the site down until it returns. The app already
+# supports MEDIA_STORAGE=s3 (R2) if that ever matters.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: signwise-uploads
+  namespace: signwise
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi

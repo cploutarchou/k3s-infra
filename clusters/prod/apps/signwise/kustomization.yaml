@@ -1,0 +1,14 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - database.yaml
+  - signwise-db-credentials.sops.yaml
+  - signwise-secret.sops.yaml
+  - signwise-seed-secret.sops.yaml
+  - uploads-pvc.yaml
+  - web-deployment.yaml
+  - web-service.yaml
+  - web-ingress.yaml
+  - seed-job.yaml
