@@ -1,5 +1,15 @@
 ---
+# `reloaded` runs ExecReload (nft -f /etc/nftables.conf), which replaces only
+# table inet filter. Never `restarted`: the stock unit's ExecStop is
+# `nft flush ruleset`, which also deletes kube-proxy, flannel and CNI hostport
+# rules. The CNI hostport rules are only recreated when a pod starts, so a
+# restart takes every hostPort (Traefik 80/443) down until those pods are
+# recreated (incident 2026-09-06).
 - name: Reload nftables
   ansible.builtin.service:
     name: nftables
-    state: restarted
+    state: reloaded
+
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true

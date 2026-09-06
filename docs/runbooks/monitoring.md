@@ -59,7 +59,11 @@ pod restart. Change the generator and open a PR instead.
   CNI bridge with a pod source address. `ansible/roles/nftables` accepts
   that traffic from `k3s_cluster_cidr` on `cni_iface` for
   `pod_to_host_tcp_ports` only. Re-run `playbooks/10-network.yml` after
-  changing those variables.
+  changing those variables. Never `systemctl restart nftables` by hand: the
+  stock unit flushes the whole ruleset on stop, which removes the CNI
+  hostport rules and takes Traefik 80/443 down until its pods are recreated
+  (`kubectl -n traefik rollout restart daemonset traefik`). The role installs
+  a drop-in so stop only deletes `table inet filter`, and reloads instead.
 - The apps expose no `/metrics`; HTTP panels use Traefik's service metrics.
 - k3s etcd snapshot uploads to R2 are not exposed as metrics; check with
   `k3s etcd-snapshot ls` on a node.

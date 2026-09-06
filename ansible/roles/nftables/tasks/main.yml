@@ -1,4 +1,28 @@
 ---
+# Make `systemctl stop/restart nftables` remove only our table. The stock
+# unit's ExecStop is `nft flush ruleset`, which wipes the iptables-nft tables
+# kube-proxy, flannel and the CNI hostport plugin maintain.
+- name: Create nftables.service drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/nftables.service.d
+    state: directory
+    mode: "0755"
+
+- name: Limit nftables.service stop to our own table
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nftables.service.d/10-own-table-only.conf
+    mode: "0644"
+    content: |
+      # Managed by ansible (roles/nftables). Stop/restart must not flush the
+      # whole ruleset: kube-proxy, flannel and CNI hostport rules live there too.
+      [Service]
+      ExecStop=
+      ExecStop=/usr/sbin/nft delete table inet filter
+  notify: Reload systemd
+
+- name: Flush handlers so the drop-in is active before any reload
+  ansible.builtin.meta: flush_handlers
+
 - name: Install nftables ruleset
   ansible.builtin.template:
     src: nftables.conf.j2
