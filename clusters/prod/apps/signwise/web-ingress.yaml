@@ -1,0 +1,29 @@
+---
+# external-dns publishes the host against all three node IPs (target
+# annotation, proxied through Cloudflare); certificate via DNS-01 on the
+# cpdevlab.com zone (cert-manager cluster-issuer dnsZones).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signwise
+  namespace: signwise
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    external-dns.alpha.kubernetes.io/target: "159.195.82.201,159.195.81.219,159.195.80.83"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - signwise.cpdevlab.com
+      secretName: signwise-cpdevlab-com-tls
+  rules:
+    - host: signwise.cpdevlab.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signwise
+                port:
+                  name: http

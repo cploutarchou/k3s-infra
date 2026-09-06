@@ -50,6 +50,11 @@ spec:
         login: true
         passwordSecret:
           name: executionlab-staging-db-credentials
+      - name: signwise
+        ensure: present
+        login: true
+        passwordSecret:
+          name: signwise-db-credentials
 
   postgresql:
     parameters:
