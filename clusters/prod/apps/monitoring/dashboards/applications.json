@@ -35,7 +35,7 @@
      "value": "website"
     },
     "sort": 1,
-    "regex": "/^(executionlab-staging|website|gvasiliourolex|signwise|mcp|monitoring)$/"
+    "regex": "/^(executionlab-staging|executionlab-site|website|gvasiliourolex|signwise|mailnexus|mcp|monitoring)$/"
    },
    {
     "name": "db",
