@@ -1,0 +1,35 @@
+---
+# One-shot seed of the signwise database (src/lib/db/seed/run.ts): default
+# site settings, the first admin user (from signwise-seed, only if no user
+# exists) and, when the database is empty, the Signwise locations, faces,
+# pricing and FAQs. Idempotent, so a re-run is safe. Bump the suffix to
+# re-run — a completed Job is immutable. Expect the first attempt to race
+# the CNPG Database CR on a brand-new app (see gvasiliourolex/seed-job.yaml);
+# backoffLimit covers it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: signwise-seed-1
+  namespace: signwise
+spec:
+  backoffLimit: 4
+  ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: ghcr.io/cploutarchou/signwise-tools:1.0.0@sha256:7c723c75449f961bc6677599e64e0e0789ca867b1d5c4aad04a55e128a3edd73
+          imagePullPolicy: IfNotPresent
+          args: ["db:seed"]
+          envFrom:
+            - secretRef:
+                name: signwise
+            - secretRef:
+                name: signwise-seed
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

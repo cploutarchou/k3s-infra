@@ -48,7 +48,7 @@ configMapGenerator in `kustomization.yaml`, mounted by the Grafana chart via
 | k3s Cluster Overview | HA posture (nodes, etcd leader, CNPG primary/replicas, scrape targets down), 2/3 capacity rule with headroom after losing a node, per-node CPU/mem/disk/net/conntrack, etcd fsync/RTT/db size, API server, PVC usage, VictoriaMetrics self-health |
 | k3s Platform | Traefik edge traffic/latency/5xx by service, cert-manager and Traefik-served cert expiry, Flux Kustomization/HelmRelease/source state and reconcile timing, external-dns sync and errors |
 | k3s Databases | CNPG topology, replication lag, WAL archiving, base backups and recovery window, per-database connections/size/transactions/cache hit/xid age, instance resources |
-| k3s Applications | One templated view per namespace (website, gvasiliourolex, mcp, monitoring): HTTP via Traefik service metrics, pods vs requests/limits, CronJobs and Jobs, database and PVC |
+| k3s Applications | One templated view per namespace (website, gvasiliourolex, signwise, mcp, monitoring): HTTP via Traefik service metrics, pods vs requests/limits, CronJobs and Jobs, database and PVC |
 
 Grafana has no persistence: a dashboard edited in the UI is lost on the next
 pod restart. Change the generator and open a PR instead.

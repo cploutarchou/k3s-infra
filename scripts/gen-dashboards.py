@@ -303,13 +303,13 @@ databases = dashboard("k3s-databases", "k3s Databases (CNPG) and Backups", [
 # --------------------------------------------------------------------------
 # 4. Applications (templated per namespace/app)
 # --------------------------------------------------------------------------
-app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(executionlab-staging|website|gvasiliourolex|mcp|monitoring)$/", multi=False, label="application")
+app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(executionlab-staging|website|gvasiliourolex|signwise|mcp|monitoring)$/", multi=False, label="application")
 app_var["current"] = {"selected": True, "text": "website", "value": "website"}
 # Database names do not always equal the namespace (executionlab-staging owns
 # executionlab_staging_platform and executionlab_staging_bot), so the CNPG
 # panels select databases through their own variable instead of reusing $app.
 db_var = var_query("db", "label_values(cnpg_pg_database_size_bytes, datname)",
-                   regex="/^(website|gvasiliourolex|executionlab_staging_.*)$/", multi=True, label="database")
+                   regex="/^(website|gvasiliourolex|signwise|executionlab_staging_.*)$/", multi=True, label="database")
 SVC = 'service=~"$app-.*@kubernetes"'
 LIMIT_OVER = [{"matcher": {"id": "byRegexp", "options": ".*limit.*"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dash", "dash": [10, 10]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
               {"matcher": {"id": "byRegexp", "options": ".*request.*"}, "properties": [{"id": "custom.lineStyle", "value": {"fill": "dot", "dash": [2, 4]}}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}]
