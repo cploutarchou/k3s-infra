@@ -16,6 +16,9 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 1
+      # Finished Jobs (and their pods) are removed after 7 days; the history
+      # limits above still cap how many are kept before that.
+      ttlSecondsAfterFinished: 604800
       activeDeadlineSeconds: 120
       template:
         spec:
@@ -56,6 +59,9 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 1
+      # Finished Jobs (and their pods) are removed after 7 days; the history
+      # limits above still cap how many are kept before that.
+      ttlSecondsAfterFinished: 604800
       activeDeadlineSeconds: 600
       template:
         spec:

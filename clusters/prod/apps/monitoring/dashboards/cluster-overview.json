@@ -389,7 +389,7 @@
       "type": "prometheus",
       "uid": "victoriametrics"
      },
-     "expr": "sum(kube_pod_status_phase{phase=~\"Pending|Failed|Unknown\"}) or vector(0)",
+     "expr": "(sum(kube_pod_status_phase{phase=~\"Pending|Unknown\"} == 1) or vector(0)) + (sum(kube_pod_status_phase{phase=\"Failed\"} == 1 unless on(namespace,pod) kube_pod_owner{owner_kind=\"Job\"}) or vector(0))",
      "refId": "A"
     }
    ],
@@ -421,7 +421,7 @@
     "graphMode": "none",
     "textMode": "auto"
    },
-   "description": "Pending, Failed or Unknown pods. Completed jobs are not counted.",
+   "description": "Pending or Unknown pods, plus Failed pods that are not Job pods. Failed Job pods show up per app under Jobs and CronJobs on the Applications dashboard.",
    "id": 8
   },
   {
