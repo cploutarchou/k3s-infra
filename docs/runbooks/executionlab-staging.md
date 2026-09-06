@@ -92,12 +92,14 @@ alongside a new `BOOTSTRAP_ADMIN_PASSWORD` and roll the backend.
 
 ## Open items
 
-- **The apex returns HTTP 526.** `executionlab.io` has three proxied A
-  records pointing at the nodes, but no Ingress serves that host, so Traefik
-  answers with its default self-signed certificate and Cloudflare rejects it.
-  This predates the staging deployment. Either give the apex an Ingress or
-  set its records to DNS-only; leaving it is a TLS error on the root domain
-  for anyone who visits.
+- ~~The apex returns HTTP 526.~~ **Resolved.** `clusters/prod/apps/executionlab-site/`
+  now serves a holding page at `executionlab.io` over a Let's Encrypt
+  certificate. Replace it wholesale when the real site ships. Note that
+  serving the app itself there is not an option: the frontend classifies
+  `executionlab.io` as the production environment and would call
+  `api.executionlab.io`, which has no backend.
+- `www.executionlab.io` has no DNS record, unlike the other domains here, so
+  it is not on the apex Ingress. Add both together if you want it.
 - `app`, `crm` and `ib` each have a single A record pointing at k3s-01 only,
   while `api`, `staging` and the apex have all three. They are the app's
   production portal hosts (`Dockerfile.frontend` build args) and nothing
@@ -126,6 +128,12 @@ the investigation established:
 - **The token cannot reach anything else.** It is strictly zone-DNS-scoped:
   `/user`, `/user/tokens`, `/memberships`, `/rulesets` and the Email Routing
   endpoint all return 403.
+- **cert-manager was also ruled out by direct observation.** Issuing the
+  apex certificate for `executionlab-site` on 6 September ran a DNS-01
+  challenge for `executionlab.io` itself — the closest possible reproduction
+  of the original conditions, and a stronger test than the subdomain
+  challenges that ran during the first deployment. The apex SPF and MX
+  records were intact before and after.
 - **The deletion was targeted, not a sweep.** Record timestamps show every
   surviving pre-existing record was last modified in May or June; nothing else
   in the zone was touched on 6 September. DKIM and DMARC are also TXT records
@@ -156,12 +164,14 @@ what the world sees and needs no credential.
 
 ## Open items
 
-- **The apex returns HTTP 526.** `executionlab.io` has three proxied A
-  records pointing at the nodes, but no Ingress serves that host, so Traefik
-  answers with its default self-signed certificate and Cloudflare rejects it.
-  This predates the staging deployment. Either give the apex an Ingress or
-  set its records to DNS-only; leaving it is a TLS error on the root domain
-  for anyone who visits.
+- ~~The apex returns HTTP 526.~~ **Resolved.** `clusters/prod/apps/executionlab-site/`
+  now serves a holding page at `executionlab.io` over a Let's Encrypt
+  certificate. Replace it wholesale when the real site ships. Note that
+  serving the app itself there is not an option: the frontend classifies
+  `executionlab.io` as the production environment and would call
+  `api.executionlab.io`, which has no backend.
+- `www.executionlab.io` has no DNS record, unlike the other domains here, so
+  it is not on the apex Ingress. Add both together if you want it.
 - `app`, `crm` and `ib` each have a single A record pointing at k3s-01 only,
   while `api`, `staging` and the apex have all three. They are the app's
   production portal hosts (`Dockerfile.frontend` build args) and nothing
