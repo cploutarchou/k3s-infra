@@ -6,7 +6,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: backend-migrate-600a24c2
+  name: backend-migrate-c8ae4cbe
   namespace: executionlab-staging
   labels:
     app.kubernetes.io/name: backend-migrate
@@ -21,7 +21,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/cploutarchou/dydx-trading-bot/backend-migrator:staging-600a24c2@sha256:725de66be622b1b5bb6bd10676864044631260d69ed529dd8a3c95a7298fd431
+          image: ghcr.io/cploutarchou/dydx-trading-bot/backend-migrator:staging-c8ae4cbe@sha256:725de66be622b1b5bb6bd10676864044631260d69ed529dd8a3c95a7298fd431
           imagePullPolicy: IfNotPresent
           args: ["up"]
           envFrom:
@@ -42,7 +42,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: bot-migrate-600a24c2
+  name: bot-migrate-c8ae4cbe
   namespace: executionlab-staging
   labels:
     app.kubernetes.io/name: bot-migrate
@@ -57,7 +57,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-600a24c2@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c8ae4cbe@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
           imagePullPolicy: IfNotPresent
           command: ["python", "-m", "alembic", "upgrade", "head"]
           envFrom:
