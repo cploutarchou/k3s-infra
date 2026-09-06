@@ -102,6 +102,70 @@ alongside a new `BOOTSTRAP_ADMIN_PASSWORD` and roll the backend.
   while `api`, `staging` and the apex have all three. They are the app's
   production portal hosts (`Dockerfile.frontend` build args) and nothing
   serves them yet.
+## SPF records lost during the initial deployment
+
+Both apex SPF TXT records were present when the deployment started and gone
+when it finished:
+
+    v=spf1 include:_spf.mx.cloudflare.net ~all              id 1ab3c11acb02c01c3794d7ee60917e65
+    v=spf1 ip4:159.195.82.201 include:executionlab.io ~all   id 738d9b4ddc2f592d5cdc4b90b603a371
+
+The window is **2026-09-06 01:05–01:30 UTC**. Nothing here deleted them. What
+the investigation established:
+
+- **external-dns is ruled out.** Its pod had 15 h of unbroken logs covering the
+  window, 10,879 lines, with zero mentions of the zone. It logs every change as
+  `action=CREATE`/`DELETE`, and `executionlab.io` is absent from its
+  `domainFilters`.
+- **cert-manager is ruled out.** In v1.21.1 the Cloudflare solver's `CleanUp`
+  calls `findTxtRecord(fqdn, content)` and deletes a single record matched on
+  **both** name and content. It cannot reach a name it was not solving for.
+  Its logs show only issuance for the two staging hosts.
+- **Nothing else in the cluster holds the credential.** Only the external-dns
+  and cert-manager secrets carry it, and they carry the *same* token value.
+- **The token cannot reach anything else.** It is strictly zone-DNS-scoped:
+  `/user`, `/user/tokens`, `/memberships`, `/rulesets` and the Email Routing
+  endpoint all return 403.
+- **The deletion was targeted, not a sweep.** Record timestamps show every
+  surviving pre-existing record was last modified in May or June; nothing else
+  in the zone was touched on 6 September. DKIM and DMARC are also TXT records
+  and both survived. An automated fault that hit exactly the two apex SPF rows
+  and nothing else is a very narrow failure mode; a person acting on
+  Cloudflare's duplicate-SPF warning is not.
+
+**Unresolved, and only the account audit log can settle it.** The zone-scoped
+token cannot read it. In the dashboard: Manage Account → Audit Log, filter to
+6 September 2026, 01:05–01:30 UTC, look for two `dns_record` delete entries at
+the apex and read the actor.
+
+The Cloudflare Email Routing record was recreated with its original content.
+The second was deliberately not recreated: two SPF records is invalid under
+RFC 7208 so neither was being honoured, and that one also included itself,
+which is a resolution loop. If something genuinely needs to send mail from
+159.195.82.201, merge it into the single record rather than adding a second.
+
+### The guard
+
+`dns-guard.yaml` runs hourly and fails if mail delivery (MX, SPF, DKIM,
+DMARC) or either staging host stops resolving as expected, including if a
+second SPF record reappears. Failures surface on the "k3s Applications"
+dashboard under "time since last success" and "failed jobs by CronJob"; those
+panels are namespace-scoped, so no dashboard change was needed. It resolves
+against public recursive resolvers rather than the Cloudflare API, so it tests
+what the world sees and needs no credential.
+
+## Open items
+
+- **The apex returns HTTP 526.** `executionlab.io` has three proxied A
+  records pointing at the nodes, but no Ingress serves that host, so Traefik
+  answers with its default self-signed certificate and Cloudflare rejects it.
+  This predates the staging deployment. Either give the apex an Ingress or
+  set its records to DNS-only; leaving it is a TLS error on the root domain
+  for anyone who visits.
+- `app`, `crm` and `ib` each have a single A record pointing at k3s-01 only,
+  while `api`, `staging` and the apex have all three. They are the app's
+  production portal hosts (`Dockerfile.frontend` build args) and nothing
+  serves them yet.
 ## SPF records lost during this deployment — unexplained
 
 The apex carried two SPF TXT records before this work:
