@@ -1,0 +1,128 @@
+---
+# Hourly integrity check on the executionlab.io records that matter.
+#
+# Both apex SPF TXT records disappeared during the initial deployment with no
+# delete issued from here (docs/runbooks/executionlab-staging.md). The cause
+# was never established, so this makes a recurrence loud instead of silent:
+# the Job exits non-zero, which surfaces on the "k3s Applications" dashboard
+# under "time since last success" and "failed jobs by CronJob" for this
+# namespace.
+#
+# It resolves against public recursive resolvers rather than the Cloudflare
+# API on purpose — it tests what the world actually sees, and it keeps the
+# Cloudflare token out of yet another workload.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-guard
+  namespace: executionlab-staging
+data:
+  check.py: |
+    """Fail if any critical executionlab.io DNS record is missing or malformed."""
+    import sys
+    import dns.resolver
+
+    NODE_IPS = {"159.195.82.201", "159.195.81.219", "159.195.80.83"}
+    MX_HOSTS = {"route1.mx.cloudflare.net.", "route2.mx.cloudflare.net.",
+                "route3.mx.cloudflare.net."}
+
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+    resolver.timeout, resolver.lifetime = 5, 15
+
+    failures = []
+
+    def lookup(name, rtype):
+        try:
+            return [r.to_text().strip('"') for r in resolver.resolve(name, rtype)]
+        except Exception as exc:
+            failures.append(f"{rtype} {name}: lookup failed ({type(exc).__name__})")
+            return None
+
+    # Mail delivery. Cloudflare Email Routing is live on this zone.
+    mx = lookup("executionlab.io", "MX")
+    if mx is not None:
+        hosts = {entry.split()[-1].lower() for entry in mx}
+        if hosts != MX_HOSTS:
+            failures.append(f"MX executionlab.io: expected {sorted(MX_HOSTS)}, got {sorted(hosts)}")
+
+    # SPF. Exactly one record — two is invalid under RFC 7208 and is the
+    # state this zone was in before the records vanished.
+    apex_txt = lookup("executionlab.io", "TXT")
+    if apex_txt is not None:
+        spf = [t for t in apex_txt if t.lower().startswith("v=spf1")]
+        if len(spf) == 0:
+            failures.append("TXT executionlab.io: no SPF record")
+        elif len(spf) > 1:
+            failures.append(f"TXT executionlab.io: {len(spf)} SPF records, RFC 7208 allows one")
+        elif "_spf.mx.cloudflare.net" not in spf[0]:
+            failures.append(f"TXT executionlab.io: SPF no longer includes Cloudflare Email Routing: {spf[0]}")
+
+    dkim = lookup("cf2024-1._domainkey.executionlab.io", "TXT")
+    if dkim is not None and not any(t.lower().startswith("v=dkim1") for t in dkim):
+        failures.append("TXT cf2024-1._domainkey: not a DKIM record")
+
+    dmarc = lookup("_dmarc.executionlab.io", "TXT")
+    if dmarc is not None and not any(t.lower().startswith("v=dmarc1") for t in dmarc):
+        failures.append("TXT _dmarc: not a DMARC record")
+
+    # Staging hosts. staging is proxied so its addresses are Cloudflare's and
+    # will change; only assert that it resolves. api.staging is DNS-only, so
+    # its addresses are ours and are worth asserting exactly.
+    if lookup("staging.executionlab.io", "A") == []:
+        failures.append("A staging.executionlab.io: no addresses")
+
+    api_a = lookup("api.staging.executionlab.io", "A")
+    if api_a is not None and set(api_a) != NODE_IPS:
+        failures.append(f"A api.staging.executionlab.io: expected the three nodes, got {sorted(api_a)}")
+
+    if failures:
+        for line in failures:
+            print(f"FAIL {line}", file=sys.stderr)
+        sys.exit(1)
+    print("ok: mail (MX/SPF/DKIM/DMARC) and both staging hosts resolve as expected")
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dns-guard
+  namespace: executionlab-staging
+  labels:
+    app.kubernetes.io/name: dns-guard
+spec:
+  schedule: "17 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: dns-guard
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: check
+              # Reuses the bot API image purely because it already carries
+              # dnspython and is side-loaded on every node — no extra pull.
+              image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c8ae4cbe@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+              imagePullPolicy: IfNotPresent
+              command: ["python", "/opt/dns-guard/check.py"]
+              volumeMounts:
+                - name: script
+                  mountPath: /opt/dns-guard
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 64Mi
+                limits:
+                  memory: 192Mi
+          volumes:
+            - name: script
+              configMap:
+                name: dns-guard
