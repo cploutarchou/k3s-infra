@@ -1,0 +1,83 @@
+---
+# Holding page for the executionlab.io apex.
+#
+# The apex has pointed three proxied A records at the cluster since June, but
+# nothing served that hostname, so Traefik answered with its default
+# self-signed certificate and Cloudflare returned 526 to every visitor. This
+# serves a real response over a real certificate instead.
+#
+# Deliberately makes no claim about the product. Replace wholesale when the
+# real site ships.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: executionlab-site
+  namespace: executionlab-site
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>ExecutionLab</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfbfa;
+        --fg: #1a1a18;
+        --muted: #6b6b66;
+        --rule: #e4e4e0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #141413; --fg: #f2f2ef; --muted: #8e8e88; --rule: #2c2c2a; }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 400 16px/1.6 ui-sans-serif, system-ui, -apple-system,
+              "Segoe UI", Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main { max-width: 26rem; text-align: center; }
+      h1 {
+        margin: 0 0 1.25rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      hr { width: 2rem; margin: 0 auto 1.25rem; border: 0; border-top: 1px solid var(--rule); }
+      p { margin: 0; color: var(--muted); }
+    </style>
+    </head>
+    <body>
+      <main>
+        <h1>ExecutionLab</h1>
+        <hr>
+        <p>This site isn&rsquo;t live yet.</p>
+      </main>
+    </body>
+    </html>
+  default.conf: |
+    server {
+      listen 8080;
+      server_name _;
+      root /usr/share/nginx/html;
+      index index.html;
+
+      add_header X-Frame-Options "DENY" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+
+      # Every path answers with the holding page; nothing else is served here.
+      location = /healthz { access_log off; return 200 "ok\n"; }
+      location / { try_files /index.html =404; }
+    }
