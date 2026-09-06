@@ -303,7 +303,7 @@ databases = dashboard("k3s-databases", "k3s Databases (CNPG) and Backups", [
 # --------------------------------------------------------------------------
 # 4. Applications (templated per namespace/app)
 # --------------------------------------------------------------------------
-app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(executionlab-staging|website|gvasiliourolex|signwise|mcp|monitoring)$/", multi=False, label="application")
+app_var = var_query("app", "label_values(kube_pod_info, namespace)", regex="/^(executionlab-staging|executionlab-site|website|gvasiliourolex|signwise|mailnexus|mcp|monitoring)$/", multi=False, label="application")
 app_var["current"] = {"selected": True, "text": "website", "value": "website"}
 # Database names do not always equal the namespace (executionlab-staging owns
 # executionlab_staging_platform and executionlab_staging_bot), so the CNPG
