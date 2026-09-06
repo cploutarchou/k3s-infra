@@ -90,8 +90,14 @@ password is set explicitly, `PasswordChangeRequired` is false — rotation is
 manual. To force a new password, set `BOOTSTRAP_ADMIN_RESET_PASSWORD=true`
 alongside a new `BOOTSTRAP_ADMIN_PASSWORD` and roll the backend.
 
-## Zone notes
+## Open items
 
+- **The apex returns HTTP 526.** `executionlab.io` has three proxied A
+  records pointing at the nodes, but no Ingress serves that host, so Traefik
+  answers with its default self-signed certificate and Cloudflare rejects it.
+  This predates the staging deployment. Either give the apex an Ingress or
+  set its records to DNS-only; leaving it is a TLS error on the root domain
+  for anyone who visits.
 - `app`, `crm` and `ib` each have a single A record pointing at k3s-01 only,
   while `api`, `staging` and the apex have all three. They are the app's
   production portal hosts (`Dockerfile.frontend` build args) and nothing
@@ -109,6 +115,13 @@ record creations and three updates, all scoped to `api.staging`. The
 `external-dns` logs contain no mention of the zone, which matches its
 `domainFilters`. The cert-manager logs show only issuance for the two staging
 hosts and no deletions.
+
+One candidate was tested and ruled out: the shell helper used for the
+Cloudflare calls expanded its JSON body as `${3:+--data "$3"}`, unquoted,
+which would word-split a body containing spaces and hand curl extra
+arguments it would treat as further URLs. Replayed locally, bash preserves
+the inner quoting and the body stays a single argument, so each call issued
+exactly one request to exactly one URL.
 
 Circumstantially, this deployment was the first time cert-manager solved
 DNS-01 in this zone (`executionlab.io` was added to the ClusterIssuer
