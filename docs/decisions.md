@@ -63,6 +63,16 @@ Short log of choices that aren't obvious from the manifests.
   private-registry pull secret (chart already supports
   `imagePullSecrets`), and remove this note. Until then a node rebuild
   needs a re-import, and image updates mean a new side-load on every node.
+- **Website image pulled from GHCR with a pull secret (2026-09-08)** — since
+  0.4.1 the app repo's release workflow pushes
+  `ghcr.io/cploutarchou/personal-website` (no more OCI tar side-loads for
+  the website; the `-migrate` image is gone, the init container runs the
+  runtime image with `/app/migrate up`). The package stays private, so the
+  `website` namespace carries `ghcr-pull` (SOPS,
+  `kubernetes.io/dockerconfigjson`, a `read:packages` token) and every
+  website pod spec lists it under `imagePullSecrets`. The digest rule is
+  unchanged: pin the `@sha256` from the workflow's job summary. The seed
+  Job still uses the side-loaded 0.2.4 seed image.
 - **MCP writes only via PRs + flux reconcile** — the server holds
   list/get/watch RBAC plus `patch` on Flux kinds only; it cannot apply or
   delete anything. Cluster changes stay reviewable in git.
