@@ -6,6 +6,7 @@ resources:
   - database.yaml
   - website-db-credentials.sops.yaml
   - website-secret.sops.yaml
+  - ghcr-pull-secret.sops.yaml
   - web-deployment.yaml
   - web-service.yaml
   - web-ingress.yaml
