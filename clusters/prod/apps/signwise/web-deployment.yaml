@@ -50,13 +50,18 @@ spec:
           env:
             - name: NEXT_PUBLIC_SITE_URL
               value: https://signwise.cpdevlab.com
-            # Enquiry notifications are logged, not sent, until an email
-            # provider is wired (EMAIL_PROVIDER=resend + RESEND_API_KEY in
-            # the signwise secret; cpdevlab.com is already verified on Resend).
+            # Environment fallback only: delivery is configured by an
+            # administrator at /admin/settings/email (Plunk on
+            # api.cpdevlab.com; the secret key is stored encrypted in the
+            # database, see docs/runbooks/signwise.md). With no CMS choice the
+            # app logs enquiry notifications instead of sending them.
             - name: EMAIL_PROVIDER
               value: console
             - name: EMAIL_FROM
               value: Signwise <no-reply@cpdevlab.com>
+            # Pre-fills the Plunk API base on the CMS page (self-hosted Plunk).
+            - name: PLUNK_API_URL
+              value: https://api.cpdevlab.com
             - name: MEDIA_STORAGE
               value: local
             - name: UPLOAD_DIR

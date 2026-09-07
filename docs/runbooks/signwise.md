@@ -37,6 +37,32 @@ ansible-playbook playbooks/31-sideload-image-bundle.yml \
 Pin the digests the playbook reports in `web-deployment.yaml` and
 `seed-job.yaml`, then commit.
 
+## Email delivery (Plunk)
+
+Enquiry notifications and customer acknowledgements are sent by the provider
+chosen at `/admin/settings/email` (administrator role). The Plunk secret key is
+saved there, encrypted with AES-256-GCM in the `app_secrets` table, and never
+shown again; the environment (`EMAIL_PROVIDER=console`, `PLUNK_API_URL`) is only
+the fallback and the pre-filled API base.
+
+To switch staging to the self-hosted Plunk instance:
+
+1. Deploy an image built from a signwise commit that includes the email
+   delivery page (migration `0001_app_secrets` runs from the migrate
+   initContainer on start-up).
+2. Recommended before storing any key: add `SECRETS_ENCRYPTION_KEY` (32
+   random bytes, `openssl rand -base64 32`) to
+   `signwise-secret.sops.yaml` with `sops edit`. Without it the key is
+   derived from `AUTH_SECRET`, so rotating `AUTH_SECRET` would invalidate the
+   stored credentials (an admin would simply re-enter them).
+3. Sign in, open **Email delivery**, choose **Plunk**, keep the API base
+   `https://api.cpdevlab.com`, paste the project's secret key (`sk_…`; a
+   public `pk_` key is rejected), set the from address to a sender verified
+   on that Plunk instance (e.g. `no-reply@cpdevlab.com`), save.
+4. Use **Send test** on the same page; the status card shows the active
+   provider and any fallback warning. Failed deliveries for real enquiries
+   are listed on each lead in the CMS (`notification_log`).
+
 ## Admin account
 
 Created once by the seed from `signwise-seed` (only when no user exists).
@@ -46,10 +72,9 @@ and sign in at `/admin/login`. To reset later, run the tools image with
 
 ## Open items
 
-- `EMAIL_PROVIDER=console`: enquiries are stored in the database and logged,
-  not emailed. Switch to `resend` by adding `RESEND_API_KEY` to the signwise
-  secret and setting `EMAIL_PROVIDER=resend` (cpdevlab.com is a verified
-  Resend domain; `EMAIL_TO` defaults to the CMS notification email).
+- Until an administrator selects Plunk on the Email delivery page (see
+  above), enquiries are stored in the database and logged, not emailed.
+  `EMAIL_TO` defaults to the CMS notification email.
 - Rate limiting keys on `X-Forwarded-For`, which Traefik rewrites to the
   Cloudflare edge IP (no `forwardedHeaders.trustedIPs`); the same applies to
   every app behind this Traefik.
