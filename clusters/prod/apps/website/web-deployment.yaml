@@ -1,8 +1,9 @@
 ---
-# Go + Gin binary (github.com/cploutarchou/my-personal-website, 0.4.0).
-# Image is side-loaded on all three nodes under this digest via
-# ansible/playbooks/30-sideload-image.yml (no registry pull path yet — see
-# docs/decisions.md); imagePullPolicy stays IfNotPresent.
+# Go + Gin binary (github.com/cploutarchou/my-personal-website, 0.4.1).
+# The image is published to GHCR by the repository's "Release image"
+# workflow (tag = frontend/package.json version, plus sha-<commit>) and is
+# pinned here by digest; the package is public so no pull secret is needed.
+# imagePullPolicy IfNotPresent is safe with a digest reference.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,11 +27,12 @@ spec:
     spec:
       initContainers:
         # Runs `/app/migrate up` (goose; the Prisma history is baselined on
-        # first run) before the app starts. Safe with replicas: 1; revisit
-        # (migration Job) if replicas grow.
+        # first run) before the app starts, using the runtime image. Safe
+        # with replicas: 1; revisit (migration Job) if replicas grow.
         - name: migrate
-          image: ghcr.io/cploutarchou/personal-website-migrate:0.4.0@sha256:3da6c21f87dec9711fd6356a587d0038a32ef14233182593ba6a7acc758a4c8b
+          image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
           imagePullPolicy: IfNotPresent
+          command: ["/app/migrate", "up"]
           envFrom:
             - secretRef:
                 name: website
@@ -49,7 +51,7 @@ spec:
               memory: 512Mi
       containers:
         - name: web
-          image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
+          image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
