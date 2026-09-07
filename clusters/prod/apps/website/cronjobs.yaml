@@ -1,7 +1,7 @@
 ---
 # Scheduled publishing + GitHub/package sync. Both hit the app's own API
 # over the cluster network using the shared CRON_SECRET; the runtime image
-# is reused (its /app/cron binary) so no extra image needs side-loading.
+# is reused (its /app/cron binary), pulled from GHCR with the ghcr-pull secret.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -23,9 +23,11 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-pull
           containers:
             - name: publish
-              image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
+              image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
               imagePullPolicy: IfNotPresent
               command:
                 - /app/cron
@@ -66,9 +68,11 @@ spec:
       template:
         spec:
           restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-pull
           containers:
             - name: sync
-              image: ghcr.io/cploutarchou/personal-website:0.4.0@sha256:5a89ef7122ef5da67c1de15048612d5ceef97f89eff89f27f89bef4d0e55b0e5
+              image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
               imagePullPolicy: IfNotPresent
               command:
                 - /app/cron
