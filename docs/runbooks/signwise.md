@@ -75,7 +75,9 @@ and sign in at `/admin/login`. To reset later, run the tools image with
 - Until an administrator selects Plunk on the Email delivery page (see
   above), enquiries are stored in the database and logged, not emailed.
   `EMAIL_TO` defaults to the CMS notification email.
-- Rate limiting keys on `X-Forwarded-For`, which Traefik rewrites to the
-  Cloudflare edge IP (no `forwardedHeaders.trustedIPs`); the same applies to
-  every app behind this Traefik.
+- Traefik rewrites `X-Forwarded-For` to the Cloudflare edge IP (no
+  `forwardedHeaders.trustedIPs`). signwise keys its rate limits on
+  `CF-Connecting-IP` instead (`TRUSTED_IP_HEADER` on the web container; needs
+  an image built from a commit that includes it); other apps behind this
+  Traefik still see the edge address.
 - No Uptime Kuma monitor yet (its monitors live in the UI, not in git).
