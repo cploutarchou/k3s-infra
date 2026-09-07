@@ -1,5 +1,5 @@
 ---
-# Next.js 16 standalone server (github.com/cploutarchou/signwise, 1.0.0).
+# Next.js 16 standalone server (github.com/cploutarchou/signwise, 1.1.1).
 # Images are side-loaded on all three nodes under these digests via
 # ansible/playbooks/31-sideload-image-bundle.yml (no registry pull path yet —
 # see docs/decisions.md); imagePullPolicy stays IfNotPresent.
@@ -28,7 +28,7 @@ spec:
         # `pnpm db:migrate` (drizzle migrator, ./drizzle SQL files) from the
         # tools image. Safe with replicas: 1; move to a Job if replicas grow.
         - name: migrate
-          image: ghcr.io/cploutarchou/signwise-tools:1.0.0@sha256:7c723c75449f961bc6677599e64e0e0789ca867b1d5c4aad04a55e128a3edd73
+          image: ghcr.io/cploutarchou/signwise-tools:1.1.1@sha256:056058047a5de7a353d1b2d6dc207510a59a77a8483d1ef39e90ad832492dbb9
           imagePullPolicy: IfNotPresent
           args: ["db:migrate"]
           envFrom:
@@ -42,7 +42,7 @@ spec:
               memory: 512Mi
       containers:
         - name: web
-          image: ghcr.io/cploutarchou/signwise:1.0.0@sha256:a50dd19f8f53278057139583c168d5c625640d885eab9085d7e4c43aafbe5ac0
+          image: ghcr.io/cploutarchou/signwise:1.1.1@sha256:3647d2bc1e4a13d770babf11d98b729388f48f623f13e9740c82671faa71e799
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
