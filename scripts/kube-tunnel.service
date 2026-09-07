@@ -1,0 +1,16 @@
+# systemd --user unit for an always-on kubectl tunnel to the k3s API VIP.
+# Installed by: scripts/kube-tunnel.sh install   (replaces @SCRIPT@)
+[Unit]
+Description=SSH tunnel 127.0.0.1:16443 -> k3s API VIP 10.0.0.10:6443
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=@SCRIPT@ run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
