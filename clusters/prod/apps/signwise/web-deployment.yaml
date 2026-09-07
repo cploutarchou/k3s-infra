@@ -62,6 +62,10 @@ spec:
             # Pre-fills the Plunk API base on the CMS page (self-hosted Plunk).
             - name: PLUNK_API_URL
               value: https://api.cpdevlab.com
+            # Traefik rewrites X-Forwarded-For to the Cloudflare edge address, so
+            # rate limits key on the real visitor IP that Cloudflare forwards.
+            - name: TRUSTED_IP_HEADER
+              value: cf-connecting-ip
             - name: MEDIA_STORAGE
               value: local
             - name: UPLOAD_DIR
