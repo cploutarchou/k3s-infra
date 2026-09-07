@@ -9,7 +9,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: signwise-seed-1
+  name: signwise-seed-2
   namespace: signwise
 spec:
   backoffLimit: 4
@@ -19,7 +19,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: seed
-          image: ghcr.io/cploutarchou/signwise-tools:1.0.0@sha256:7c723c75449f961bc6677599e64e0e0789ca867b1d5c4aad04a55e128a3edd73
+          image: ghcr.io/cploutarchou/signwise-tools:1.1.1@sha256:056058047a5de7a353d1b2d6dc207510a59a77a8483d1ef39e90ad832492dbb9
           imagePullPolicy: IfNotPresent
           args: ["db:seed"]
           envFrom:
