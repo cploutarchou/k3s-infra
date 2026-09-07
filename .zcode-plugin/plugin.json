@@ -1,0 +1,22 @@
+{
+  "name": "k3s-infra",
+  "version": "0.1.0",
+  "description": "k3s-infra operating knowledge for ZCode: GitOps workflow, verify-before-claiming, incident triage, Ansible day-0 hardening, the read-only cluster MCP server, reusable slash commands (health, triage, validate, sync-skills), and a guard hook that blocks cluster write commands.",
+  "author": { "name": "Christos Ploutarchou" },
+  "repository": "https://github.com/cploutarchou/k3s-infra",
+  "keywords": ["k3s", "kubernetes", "flux", "gitops", "cnpg", "ansible"],
+  "skills": ".agents/skills",
+  "commands": ".agents/commands",
+  "agents": ".zcode/agents",
+  "hooks": ".zcode/hooks/hooks.json",
+  "mcpServers": ".zcode/mcp.json",
+  "userConfig": {
+    "mcp_api_key": {
+      "type": "string",
+      "title": "k3s-infra MCP API key",
+      "description": "Value of the api-key field of the mcp-server SOPS secret. Sent as X-API-Key to https://mcp.cpdevlab.com/mcp. Never commit it.",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
