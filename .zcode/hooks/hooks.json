@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${ZCODE_PLUGIN_ROOT}/.zcode/hooks/guard-cluster-writes.sh\"",
+            "shell": true,
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

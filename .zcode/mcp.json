@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "k3s-infra": {
+      "type": "http",
+      "url": "https://mcp.cpdevlab.com/mcp",
+      "headers": { "X-API-Key": "${user_config.mcp_api_key}" },
+      "enabled": true
+    }
+  }
+}
