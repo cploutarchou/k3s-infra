@@ -22,6 +22,34 @@ func Register(s *server.MCPServer, kc *kube.Clients) {
 	registerGitHub(s)
 }
 
+// readOnly annotates an observational tool: it never mutates the cluster,
+// repeating it changes nothing, and it talks only to the cluster API.
+// mcp-go's defaults (readOnlyHint false, destructiveHint true) would make a
+// client treat "list nodes" like a destructive action.
+func readOnly(title string) mcp.ToolOption {
+	return mcp.WithToolAnnotation(mcp.ToolAnnotation{
+		Title:           title,
+		ReadOnlyHint:    mcp.ToBoolPtr(true),
+		DestructiveHint: mcp.ToBoolPtr(false),
+		IdempotentHint:  mcp.ToBoolPtr(true),
+		OpenWorldHint:   mcp.ToBoolPtr(false),
+	})
+}
+
+// additiveWrite annotates a write that only adds (a PR, a reconcile
+// request) and never destroys anything. idempotent says whether repeating
+// the same call changes anything further; openWorld whether it leaves the
+// cluster (GitHub).
+func additiveWrite(title string, idempotent, openWorld bool) mcp.ToolOption {
+	return mcp.WithToolAnnotation(mcp.ToolAnnotation{
+		Title:           title,
+		ReadOnlyHint:    mcp.ToBoolPtr(false),
+		DestructiveHint: mcp.ToBoolPtr(false),
+		IdempotentHint:  mcp.ToBoolPtr(idempotent),
+		OpenWorldHint:   mcp.ToBoolPtr(openWorld),
+	})
+}
+
 // jsonResult marshals v as indented JSON into a tool text result.
 func jsonResult(v any) (*mcp.CallToolResult, error) {
 	b, err := json.MarshalIndent(v, "", "  ")

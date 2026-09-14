@@ -76,6 +76,7 @@ func registerGitHub(s *server.MCPServer) {
 	s.AddTool(
 		mcp.NewTool("propose_change",
 			mcp.WithDescription("Open a GitHub PR against the infra repo with one file added or updated on a new branch. This is the only way to change cluster state: the PR is reviewed, merged, and Flux reconciles it."),
+			additiveWrite("Open a GitHub PR", false, true),
 			mcp.WithString("branch", mcp.Required(), mcp.Description("New branch name, e.g. mcp/update-traefik.")),
 			mcp.WithString("path", mcp.Required(), mcp.Description("Repo-relative file path, e.g. clusters/prod/apps/foo/deployment.yaml.")),
 			mcp.WithString("content", mcp.Required(), mcp.Description("Full new file content (UTF-8).")),
