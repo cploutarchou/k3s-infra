@@ -73,9 +73,9 @@ while IFS= read -r f; do
 done < <(grep -rlE '^kind: Secret' clusters --include='*.yaml' 2>/dev/null || true)
 if [ "$BAD_SECRETS" -ne 0 ]; then FAIL=1; else echo "ok: no plaintext Secret manifests"; fi
 
-section "mcp (go build + vet)"
+section "mcp (go build + vet + test)"
 if have go; then
-  (cd mcp && go build ./... && go vet ./...) || FAIL=1
+  (cd mcp && go build ./... && go vet ./... && go test ./...) || FAIL=1
 else
   SKIPPED+=("go (mcp build)")
 fi

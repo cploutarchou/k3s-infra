@@ -36,6 +36,7 @@ func registerFlux(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("flux_status",
 			mcp.WithDescription("Status of Flux GitRepositories, Kustomizations and HelmReleases: readiness, revision, last message."),
+			readOnly("Flux status"),
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			out := []fluxObjectStatus{}
@@ -56,6 +57,7 @@ func registerFlux(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("flux_reconcile",
 			mcp.WithDescription("Ask Flux to reconcile one Kustomization or HelmRelease now (sets the reconcile.fluxcd.io/requestedAt annotation). This is the only sanctioned cluster write besides GitHub PRs."),
+			additiveWrite("Request a Flux reconcile", true, false),
 			mcp.WithString("kind", mcp.Required(), mcp.Description("kustomization or helmrelease")),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Object namespace (usually flux-system).")),
 			mcp.WithString("name", mcp.Required(), mcp.Description("Object name.")),
