@@ -1,0 +1,52 @@
+---
+# Root's authorized_keys is rendered from ssh_authorized_keys (group_vars):
+# git is the list of machines that may log in. Guards, in order:
+#   1. every entry must be a well-formed, commented ed25519 public key, so a
+#      placeholder such as "ssh-ed25519 AAAA... me@pc" never reaches a node;
+#   2. the key this control machine authenticates with must be in the list,
+#      otherwise applying the file would lock out the machine running it;
+#   3. every key must parse with the node's own ssh-keygen (read-only, runs
+#      in check mode too), and the rendered file is validated once more
+#      before it replaces the old one; a backup is kept next to it.
+# No sshd reload is needed: authorized_keys is read at every login.
+- name: Require well-formed, commented ed25519 public keys
+  ansible.builtin.assert:
+    that:
+      - ssh_authorized_keys | length > 0
+      - ssh_authorized_keys | map('trim') | reject('match', hardening_pubkey_regex) | list | length == 0
+    fail_msg: >-
+      ssh_authorized_keys entries must be full lines
+      "ssh-ed25519 <68-char key> <comment>"; rejected:
+      {{ ssh_authorized_keys | map('trim') | reject('match', hardening_pubkey_regex) | list }}
+  vars:
+    hardening_pubkey_regex: '^(ssh-ed25519|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+/]{68,}=* \S.*$'
+
+- name: Refuse a list that would lock out this control machine
+  ansible.builtin.assert:
+    that:
+      - hardening_control_key in (ssh_authorized_keys | map('trim') | list)
+    fail_msg: >-
+      {{ ansible_ssh_private_key_file }}.pub is not in ssh_authorized_keys;
+      applying it would lock out the machine running ansible.
+  vars:
+    hardening_control_key: "{{ lookup('ansible.builtin.file', (ansible_ssh_private_key_file ~ '.pub') | expanduser) | trim }}"
+
+- name: Verify each key parses with the node's ssh-keygen
+  ansible.builtin.command:
+    cmd: ssh-keygen -lf /dev/stdin
+    stdin: "{{ item | trim }}"
+  loop: "{{ ssh_authorized_keys }}"
+  loop_control:
+    label: "{{ (item | trim).split(' ')[2] }}"
+  changed_when: false
+  check_mode: false
+
+- name: Render root authorized_keys from git
+  ansible.builtin.copy:
+    dest: /root/.ssh/authorized_keys
+    owner: root
+    group: root
+    mode: "0600"
+    backup: true
+    validate: ssh-keygen -lf %s
+    content: "{{ (['# Managed by ansible (roles/hardening): edit ssh_authorized_keys in git.'] + (ssh_authorized_keys | map('trim') | list)) | join('\n') }}\n"
