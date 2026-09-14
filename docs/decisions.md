@@ -73,6 +73,21 @@ Short log of choices that aren't obvious from the manifests.
   website pod spec lists it under `imagePullSecrets`. The digest rule is
   unchanged: pin the `@sha256` from the workflow's job summary. The seed
   Job still uses the side-loaded 0.2.4 seed image.
+- **MCP auth: public handshake, strict on everything else (2026-09-14)** —
+  a 14 Sep review concluded the API key was ignored because `initialize`
+  and `tools/list` answered without one; those are the deliberately
+  anonymous handshake subset (the claude.ai connector probes before its key
+  is configured), and the deployed 0.2.1 binary did enforce the key on
+  `tools/call`. 0.3.0 keeps the public handshake (values
+  `auth.publicHandshake`, `false` = key everywhere) but now rejects any
+  presented-but-wrong credential on every request, hashes before the
+  constant-time compare, logs rejections without values, ships tests for
+  the policy, and fixes the tool annotations (reads were advertised as
+  destructive). The key was rotated in the same change. The HelmRelease
+  got `driftDetection: enabled` so the emergency `kubectl scale` used
+  during the review is corrected by git, and a `podAnnotations` rotation
+  stamp forces the rollout a secret change needs. Runbook:
+  `docs/runbooks/mcp-server.md`.
 - **MCP writes only via PRs + flux reconcile** — the server holds
   list/get/watch RBAC plus `patch` on Flux kinds only; it cannot apply or
   delete anything. Cluster changes stay reviewable in git.

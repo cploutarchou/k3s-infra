@@ -21,6 +21,7 @@ func registerReadOnly(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("nodes",
 			mcp.WithDescription("List cluster nodes with roles, readiness, versions, IPs and allocatable resources."),
+			readOnly("List nodes"),
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			list, err := kc.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
@@ -75,6 +76,7 @@ func registerReadOnly(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("pods",
 			mcp.WithDescription("List pods. Defaults to all namespaces; set problemsOnly to filter to pods that are not Running/Succeeded."),
+			readOnly("List pods"),
 			mcp.WithString("namespace", mcp.Description("Namespace to list; empty for all.")),
 			mcp.WithBoolean("problemsOnly", mcp.Description("Only pods not in Running or Succeeded phase, or not ready.")),
 		),
@@ -125,6 +127,7 @@ func registerReadOnly(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("events",
 			mcp.WithDescription("Recent cluster events, newest first."),
+			readOnly("Recent events"),
 			mcp.WithString("namespace", mcp.Description("Namespace; empty for all.")),
 			mcp.WithBoolean("warningsOnly", mcp.Description("Only Warning events.")),
 			mcp.WithNumber("limit", mcp.Description("Maximum events to return (default 50).")),
@@ -174,6 +177,7 @@ func registerReadOnly(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("logs",
 			mcp.WithDescription("Fetch logs from one pod container (capped at 256KiB)."),
+			readOnly("Pod logs"),
 			mcp.WithString("namespace", mcp.Required(), mcp.Description("Pod namespace.")),
 			mcp.WithString("pod", mcp.Required(), mcp.Description("Pod name.")),
 			mcp.WithString("container", mcp.Description("Container name; defaults to the first container.")),
