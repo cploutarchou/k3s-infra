@@ -23,8 +23,14 @@ data:
     import dns.resolver
 
     NODE_IPS = {"159.195.82.201", "159.195.81.219", "159.195.80.83"}
-    MX_HOSTS = {"route1.mx.cloudflare.net.", "route2.mx.cloudflare.net.",
-                "route3.mx.cloudflare.net."}
+    # Mail moved from Cloudflare Email Routing to AWS SES (eu-central-1) on
+    # 2026-09-14/15: SES receives (MX) and sends (SPF + Easy DKIM).
+    MX_HOSTS = {"inbound-smtp.eu-central-1.amazonaws.com."}
+    SPF_INCLUDE = "amazonses.com"
+    # SES Easy DKIM publishes three CNAMEs <token>._domainkey -> <token>.dkim.amazonses.com.
+    # The tokens come from the SES console (verified identity -> DKIM). While
+    # this list is empty the check fails on purpose, so the gap stays visible.
+    SES_DKIM_TOKENS = []
 
     resolver = dns.resolver.Resolver(configure=False)
     resolver.nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
@@ -39,7 +45,7 @@ data:
             failures.append(f"{rtype} {name}: lookup failed ({type(exc).__name__})")
             return None
 
-    # Mail delivery. Cloudflare Email Routing is live on this zone.
+    # Mail delivery: SES inbound.
     mx = lookup("executionlab.io", "MX")
     if mx is not None:
         hosts = {entry.split()[-1].lower() for entry in mx}
@@ -47,7 +53,8 @@ data:
             failures.append(f"MX executionlab.io: expected {sorted(MX_HOSTS)}, got {sorted(hosts)}")
 
     # SPF. Exactly one record — two is invalid under RFC 7208 and is the
-    # state this zone was in before the records vanished.
+    # state this zone was in before the records vanished. Sending goes
+    # through SES, so the record must authorise it.
     apex_txt = lookup("executionlab.io", "TXT")
     if apex_txt is not None:
         spf = [t for t in apex_txt if t.lower().startswith("v=spf1")]
@@ -55,12 +62,19 @@ data:
             failures.append("TXT executionlab.io: no SPF record")
         elif len(spf) > 1:
             failures.append(f"TXT executionlab.io: {len(spf)} SPF records, RFC 7208 allows one")
-        elif "_spf.mx.cloudflare.net" not in spf[0]:
-            failures.append(f"TXT executionlab.io: SPF no longer includes Cloudflare Email Routing: {spf[0]}")
+        elif SPF_INCLUDE not in spf[0]:
+            failures.append(f"TXT executionlab.io: SPF does not include {SPF_INCLUDE}: {spf[0]}")
 
-    dkim = lookup("cf2024-1._domainkey.executionlab.io", "TXT")
-    if dkim is not None and not any(t.lower().startswith("v=dkim1") for t in dkim):
-        failures.append("TXT cf2024-1._domainkey: not a DKIM record")
+    # DKIM: SES Easy DKIM, one CNAME per token.
+    if not SES_DKIM_TOKENS:
+        failures.append("DKIM: SES_DKIM_TOKENS is empty in the dns-guard ConfigMap; "
+                        "fill in the three selectors from the SES console")
+    for token in SES_DKIM_TOKENS:
+        name = f"{token}._domainkey.executionlab.io"
+        want = f"{token}.dkim.amazonses.com."
+        cname = lookup(name, "CNAME")
+        if cname is not None and [c.lower() for c in cname] != [want]:
+            failures.append(f"CNAME {name}: expected {want}, got {cname}")
 
     dmarc = lookup("_dmarc.executionlab.io", "TXT")
     if dmarc is not None and not any(t.lower().startswith("v=dmarc1") for t in dmarc):
@@ -80,7 +94,7 @@ data:
         for line in failures:
             print(f"FAIL {line}", file=sys.stderr)
         sys.exit(1)
-    print("ok: mail (MX/SPF/DKIM/DMARC) and both staging hosts resolve as expected")
+    print("ok: mail (SES MX/SPF/DKIM, DMARC) and both staging hosts resolve as expected")
 ---
 apiVersion: batch/v1
 kind: CronJob
