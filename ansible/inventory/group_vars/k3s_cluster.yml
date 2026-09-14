@@ -37,6 +37,20 @@ r2_region: auto
 r2_access_key_id: ""
 r2_secret_access_key: ""
 
+# --- SSH access (root, key-only) ---
+# The machines allowed to log in. roles/hardening renders this list
+# EXCLUSIVELY into /root/.ssh/authorized_keys on every node, so removing a
+# line revokes that machine on the next run and a key missing here does not
+# work anywhere. One ed25519 key per machine, comment = machine name
+# (ssh-keygen -t ed25519 -f ~/.ssh/k3s-infra -C k3s-infra@<hostname>).
+# Apply with playbooks/40-ssh-keys.yml (--check --diff first). The role
+# refuses a list that lacks the key of the machine running ansible.
+ssh_authorized_keys:
+  # chris-workstation (the machine that runs ansible)
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGTCEGdL5gi3w8zyzdyPokMTRp/HN6HznCOXJ0p76FmM k3s-infra
+  # MacBook Pro
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICi9fCO+OCCGB0xQqXwMizatzJyC4v06t35vVUVJBQAC k3s-infra@Chriss-MacBook-Pro
+
 # --- Hardening ---
 ssh_permit_root_login: prohibit-password # key-only root; no password auth anywhere
 unattended_upgrades: true

@@ -1,0 +1,16 @@
+---
+# Apply only the SSH authorized_keys part of the hardening role: onboard or
+# revoke an operator machine by editing ssh_authorized_keys in
+# inventory/group_vars/k3s_cluster.yml, then
+#
+#   ansible-playbook playbooks/40-ssh-keys.yml --check --diff   # review
+#   ansible-playbook playbooks/40-ssh-keys.yml                  # apply
+- name: Manage root SSH authorized keys
+  hosts: k3s_cluster
+  any_errors_fatal: true
+  gather_facts: false
+  tasks:
+    - name: Render authorized_keys from git
+      ansible.builtin.include_role:
+        name: hardening
+        tasks_from: authorized_keys

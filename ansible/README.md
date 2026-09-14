@@ -8,6 +8,7 @@ ansible-playbook playbooks/site.yml                       # full day-0
 ansible-playbook playbooks/00-hardening.yml               # SSH, sysctl, /tmp
 ansible-playbook playbooks/10-network.yml                 # eth1 vLAN + nftables
 ansible-playbook playbooks/20-k3s.yml -e @vault/r2-credentials.sops.yml
+ansible-playbook playbooks/40-ssh-keys.yml                # root authorized_keys from group_vars
 ```
 
 Order matters: hardening → network → k3s. The k3s play refuses to run if
