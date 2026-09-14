@@ -14,6 +14,11 @@ spec:
         kind: GitRepository
         name: flux-system
         namespace: flux-system
+  # Correct manual drift (e.g. an emergency `kubectl scale`) on every
+  # reconcile, so this file is the only lever. To stop the server, set
+  # replicaCount: 0 here; to pause reconciliation, suspend the HelmRelease.
+  driftDetection:
+    mode: enabled
   values:
     replicaCount: 2
     affinity:
@@ -28,9 +33,18 @@ spec:
     # push is pending on a packages-scoped token.
     image:
       repository: ghcr.io/cploutarchou/k3s-infra-mcp
-      digest: sha256:4c5547e1f08d48765ab05005c91e54504ba43589dc18dc493a324f3e1d431e13
-      tag: 0.2.1
+      digest: sha256:fcd7674b5147a7de66f380febc40f2e40a25f8b50908f370e3ea47254045be50
+      tag: 0.3.0
     existingSecret: mcp-server
+    auth:
+      # Handshake (initialize, tools/list, ping) stays anonymous so the
+      # claude.ai connector can probe before its key is set; tools/call and
+      # any presented credential are always checked. false = key everywhere.
+      publicHandshake: true
+    # Bump after rotating api-key in mcp-server-secret.sops.yaml: the key is
+    # read at container start, and this forces the rollout.
+    podAnnotations:
+      k3s-infra.cpdevlab.com/secret-rotated-at: "2026-09-14"
     github:
       owner: cploutarchou
       repo: k3s-infra

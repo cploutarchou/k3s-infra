@@ -3,7 +3,7 @@ image:
   # Pin by digest before deploying (repo convention — never :latest):
   #   docker buildx imagetools inspect ghcr.io/cploutarchou/k3s-infra-mcp:<tag>
   digest: "" # e.g. sha256:abc123...
-  tag: "0.2.0" # used only if digest is empty; CI should always set digest
+  tag: "0.3.0" # used only if digest is empty; CI should always set digest
 
 replicaCount: 1
 
@@ -16,9 +16,26 @@ imagePullSecrets: []
 
 listenAddr: ":8080"
 
-# Existing Secret holding MCP_API_KEY (and optionally GITHUB_TOKEN).
-# Create it via SOPS in clusters/prod/apps/mcp/ — never plain in git.
+# Existing Secret holding MCP_API_KEY (key `api-key`) and optionally
+# GITHUB_TOKEN (key `github-token`). Create it via SOPS in
+# clusters/prod/apps/mcp/ — never plain in git. The chart never renders a
+# Secret and never accepts the key as a value.
 existingSecret: mcp-server
+
+auth:
+  # Admit the MCP handshake (initialize, notifications/initialized,
+  # tools/list, ping) and the GET/DELETE transport verbs without a
+  # credential, so a claude.ai connector can be added before its key is
+  # configured. That subset exposes only the server name and the tool
+  # schemas (public in this repo anyway); tools/call always needs the key,
+  # and any credential that is presented must be valid on every request.
+  # false = the key is required on every request without exception.
+  publicHandshake: true
+
+# Extra pod-template annotations. The API key is read from the Secret only
+# at container start, so after rotating it bump a value here (e.g.
+# k3s-infra.cpdevlab.com/secret-rotated-at) to force a rollout.
+podAnnotations: {}
 
 github:
   owner: cploutarchou

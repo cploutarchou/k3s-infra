@@ -43,6 +43,7 @@ func registerHA(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("ha_report",
 			mcp.WithDescription("One-shot HA posture report: node readiness, etcd health, non-running pods, CNPG topology and the 2/3 capacity rule."),
+			readOnly("HA report"),
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			rep := haReport{ProblemPods: []string{}, CNPG: []cnpgStatus{}}

@@ -33,6 +33,7 @@ func registerCNPG(s *server.MCPServer, kc *kube.Clients) {
 	s.AddTool(
 		mcp.NewTool("cnpg_status",
 			mcp.WithDescription("Status of CloudNativePG clusters: topology, primary, readiness, backup and WAL archiving recency."),
+			readOnly("CNPG status"),
 		),
 		func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			list, err := kc.Dynamic.Resource(cnpgClusterGVR).Namespace("").List(ctx, metav1.ListOptions{})
