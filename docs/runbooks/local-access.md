@@ -91,17 +91,26 @@ kube-tunnel install                        # or: kube-tunnel start
 kubectl get nodes -o wide
 ```
 
-Prefer a **separate key per workstation** so one can be revoked without
-touching the others: generate `ssh-keygen -t ed25519 -f ~/.ssh/k3s-infra
--C k3s-infra@<hostname>` on the new machine and, from a machine that
-already has access, append its `.pub` to `/root/.ssh/authorized_keys` on
-all three nodes. Ansible does not manage root's authorized_keys, so this is
-a manual operator step on each node (SSH is key-only; there is no other
-way in).
+Use a **separate key per machine** so one can be revoked without touching
+the others. Root's `authorized_keys` on all three nodes is rendered from
+`ssh_authorized_keys` in `ansible/inventory/group_vars/k3s_cluster.yml`;
+a key that is not in git does not work anywhere.
+
+1. On the new machine: `ssh-keygen -t ed25519 -f ~/.ssh/k3s-infra -C
+   k3s-infra@<hostname>` and copy the one-line `~/.ssh/k3s-infra.pub`
+   (public, safe to paste).
+2. Add that line to `ssh_authorized_keys` with a comment naming the
+   machine, open a PR.
+3. From a machine that already has access:
+   `cd ansible && ansible-playbook playbooks/40-ssh-keys.yml --check --diff`,
+   then the same without `--check`. The role refuses placeholders, keys
+   that do not parse, and any list that lacks the key of the machine
+   running it.
 
 The kubeconfig carries a client certificate, not a token, so the same file
-works from any machine. To revoke a workstation, delete its SSH public key
-from the nodes; without the tunnel the kubeconfig is useless.
+works from any machine. To revoke a workstation, remove its line from
+`ssh_authorized_keys` and run the playbook; without the tunnel the
+kubeconfig is useless.
 
 ## Testing changes locally (no cluster writes)
 

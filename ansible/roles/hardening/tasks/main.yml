@@ -44,6 +44,9 @@
     validate: sshd -t -f %s
   notify: Restart sshd
 
+- name: Manage root authorized_keys from git
+  ansible.builtin.include_tasks: authorized_keys.yml
+
 - name: Kernel modules required by k3s
   ansible.builtin.copy:
     dest: /etc/modules-load.d/k3s.conf

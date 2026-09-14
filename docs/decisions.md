@@ -88,6 +88,15 @@ Short log of choices that aren't obvious from the manifests.
   during the review is corrected by git, and a `podAnnotations` rotation
   stamp forces the rollout a secret change needs. Runbook:
   `docs/runbooks/mcp-server.md`.
+- **Root SSH keys rendered from git (2026-09-14)** — `authorized_keys`
+  had drifted (the MacBook key was only on k3s-01) and onboarding a
+  machine was a manual edit on three nodes. `ssh_authorized_keys` in
+  group_vars is now rendered exclusively by `roles/hardening`
+  (`playbooks/40-ssh-keys.yml` applies just that), with guards against
+  placeholders, unparseable keys and lists that would lock out the control
+  machine. No source-IP allowlist on port 22: the operator's address
+  changes while travelling, so an allowlist would be a lockout hazard;
+  key-only auth is the control.
 - **MCP writes only via PRs + flux reconcile** — the server holds
   list/get/watch RBAC plus `patch` on Flux kinds only; it cannot apply or
   delete anything. Cluster changes stay reviewable in git.
