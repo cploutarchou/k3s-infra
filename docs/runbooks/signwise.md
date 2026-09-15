@@ -19,9 +19,17 @@ Next.js 16 website + CMS for Signwise Outdoor Advertising
 Same interim path as the other apps (docs/decisions.md). `NEXT_PUBLIC_SITE_URL`
 is a build argument, so a hostname change is a rebuild.
 
+The build context is the working tree, so a stale or dirty checkout ships
+silently: 1.2.0 was built from a checkout that predated the site-updates
+merge and served the 1.1.1 content until 1.2.1 replaced it. Check out the
+commit to release and confirm it before building:
+
 ```bash
 cd ../signwise
-R=ghcr.io/cploutarchou; V=1.0.0
+git fetch origin && git checkout master && git pull --ff-only origin master
+git status --short --branch   # expect "## master...origin/master", no ahead/behind, no changes
+git rev-parse --short HEAD    # the commit the images are built from; quote it in the pin PR
+R=ghcr.io/cploutarchou; V=1.2.1
 docker build --provenance=false --sbom=false --target runner \
   --build-arg NEXT_PUBLIC_SITE_URL=https://signwise.cpdevlab.com -t $R/signwise:$V .
 docker build --provenance=false --sbom=false --target tools \
@@ -34,8 +42,10 @@ ansible-playbook playbooks/31-sideload-image-bundle.yml \
   -e '{"sideload_images":["'$R'/signwise:'$V'","'$R'/signwise-tools:'$V'"]}'
 ```
 
-Pin the digests the playbook reports in `web-deployment.yaml` and
-`seed-job.yaml`, then commit.
+Pin the digests the playbook reports in `web-deployment.yaml` (web container
+and migrate initContainer), then commit. `seed-job.yaml` only moves to the new
+tools image when the seed should run again (bump the Job suffix); without
+`SEED_FORCE` a re-run keeps the existing content.
 
 ## Email delivery (Plunk)
 
