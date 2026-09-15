@@ -1,0 +1,46 @@
+---
+# One-off content fix: set the primary phone number (site_settings key "phone")
+# to +357 94 145 000. The seed only inserts missing keys, so the number from
+# the first seed survived the 1.2.1 rollout. Runs on the tools image with the
+# app's DATABASE_URL, logs the previous and new value, and has no TTL so Flux
+# does not re-create (and re-run) it once it has completed. Delete this file
+# after the Job has succeeded; Flux prunes the completed Job.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: signwise-set-phone-1
+  namespace: signwise
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: set-phone
+          image: ghcr.io/cploutarchou/signwise-tools:1.2.1@sha256:0a6ea1e984d85954a02141792c48e58c1c377d1ae05343624ba1966593df11db
+          imagePullPolicy: IfNotPresent
+          command: ["node", "-e"]
+          args:
+            - |
+              const postgres = require("postgres");
+              const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+              const next = "+357 94 145 000";
+              (async () => {
+                const [before] = await sql`select value from site_settings where key = 'phone'`;
+                const [after] = await sql`
+                  insert into site_settings (key, value) values ('phone', ${sql.json(next)})
+                  on conflict (key) do update set value = excluded.value, updated_at = now()
+                  returning value`;
+                console.log(`phone: ${JSON.stringify(before ? before.value : null)} -> ${JSON.stringify(after.value)}`);
+              })()
+                .catch((error) => { console.error(error); process.exitCode = 1; })
+                .finally(() => sql.end());
+          envFrom:
+            - secretRef:
+                name: signwise
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi

@@ -12,3 +12,4 @@ resources:
   - web-service.yaml
   - web-ingress.yaml
   - seed-job.yaml
+  - set-phone-job.yaml
