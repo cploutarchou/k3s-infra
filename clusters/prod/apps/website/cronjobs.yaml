@@ -27,7 +27,7 @@ spec:
             - name: ghcr-pull
           containers:
             - name: publish
-              image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
+              image: ghcr.io/cploutarchou/personal-website:0.5.0@sha256:fc8fdc77b81c2c125ec0396d6f930e2e1535fd937fbae253606d72f52e2b7c2e
               imagePullPolicy: IfNotPresent
               command:
                 - /app/cron
@@ -72,7 +72,7 @@ spec:
             - name: ghcr-pull
           containers:
             - name: sync
-              image: ghcr.io/cploutarchou/personal-website:0.4.1@sha256:f6cb4ac0acb3995be6cc26497d3090f796e1dffde9580c9f59dd24c0b0e51b77
+              image: ghcr.io/cploutarchou/personal-website:0.5.0@sha256:fc8fdc77b81c2c125ec0396d6f930e2e1535fd937fbae253606d72f52e2b7c2e
               imagePullPolicy: IfNotPresent
               command:
                 - /app/cron
