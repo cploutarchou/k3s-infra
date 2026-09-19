@@ -21,11 +21,11 @@ spec:
       labels:
         app.kubernetes.io/name: backend
       annotations:
-        executionlab/secret-revision: "2026-09-06.2"
+        executionlab/secret-revision: "2026-09-20.1"
     spec:
       containers:
         - name: backend
-          image: ghcr.io/cploutarchou/dydx-trading-bot/backend:staging-c8ae4cbe@sha256:6384fdcd6eae4c9daf7cf78b78649072014099f56362c1b72c816ec4f7c22993
+          image: ghcr.io/cploutarchou/dydx-trading-bot/backend:staging-c7c3a066@sha256:7dc7645716c56a88f9bda08afa5e47d028ab7b908557842e75e10bc3257ab3e9
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -35,6 +35,8 @@ spec:
                 name: executionlab-config
             - secretRef:
                 name: executionlab-staging
+            - secretRef:
+                name: executionlab-staging-runtime
           # /ready reports on the database and the bot API, so readiness
           # genuinely gates on dependencies being reachable.
           readinessProbe:

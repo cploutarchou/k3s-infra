@@ -11,6 +11,13 @@ metadata:
     app.kubernetes.io/name: bot-api
 spec:
   replicas: 1
+  # bot-api supervises trading runtimes as child processes of this pod. A
+  # rolling update would start the replacement before the old pod (and its
+  # children) stopped: two supervisors for the same instances. The app also
+  # takes a per-instance PostgreSQL advisory lock, which would refuse the
+  # second trader, but the deployment must not rely on that alone.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: bot-api
@@ -19,11 +26,15 @@ spec:
       labels:
         app.kubernetes.io/name: bot-api
       annotations:
-        executionlab/secret-revision: "2026-09-06.2"
+        executionlab/secret-revision: "2026-09-20.1"
     spec:
+      # SIGTERM asks a runtime to finish the pair it is building (both legs, or
+      # its emergency cleanup) and open nothing new. One entry with cleanup can
+      # take over a minute; the default 30 s would SIGKILL it between two legs.
+      terminationGracePeriodSeconds: 180
       containers:
         - name: bot-api
-          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c8ae4cbe@sha256:1e3f48fd66108f9d60e37ef3567f09710b682fbe075d79baee0c1f3bc7d28a0d
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c7c3a066@sha256:8617df0ea391534a4d1b3b0094f57d9e829aaa76076f29e7b67d8e13a94590e5
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -33,6 +44,8 @@ spec:
                 name: executionlab-config
             - secretRef:
                 name: executionlab-staging
+            - secretRef:
+                name: executionlab-staging-runtime
           readinessProbe:
             httpGet:
               path: /ready

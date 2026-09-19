@@ -75,6 +75,33 @@ ansible-playbook playbooks/31-sideload-image-bundle.yml \
 
 Then pin the reported digests in the manifests and commit.
 
+## Runtime settings the application depends on
+
+- `TRUSTED_PROXIES: 10.42.0.0/16` (ConfigMap). Traefik is a DaemonSet with
+  hostPort, so the backend's direct peer is a Traefik pod. Only peers in this
+  range may set `X-Forwarded-For`. Without it every client shares Traefik's
+  address, and with it the per-IP login budget (1 rps, burst 20).
+- `executionlab-staging-runtime` (SOPS secret):
+  - `BOT_API_TOKEN` — the backend presents it to the bot API, where it maps to
+    a superuser principal. Lifecycle calls (create/start/stop/delete) need an
+    admin on the bot API, so without the token non-admin users get 403.
+  - `BOT_CREDENTIALS_ENCRYPTION_KEY` — outside an explicit dev/test environment
+    the bot refuses to store wallet credentials in plaintext. **Losing this key
+    makes sealed credentials unrecoverable**; it is recoverable from the SOPS
+    file with the cluster age key. Existing plaintext rows are re-sealed on
+    their next write.
+- `bot-api` uses `strategy: Recreate` and a 180 s termination grace period. It
+  supervises trading runtimes as child processes; a runtime finishes the pair
+  it is building on SIGTERM. The app also takes a PostgreSQL session-level
+  advisory lock per instance id, which needs the **direct** `postgres-rw`
+  service. Do not put a transaction-pooling proxy (PgBouncer, CNPG Pooler in
+  transaction mode) in front of the bot's database.
+- A failed emergency close sets an "entries halted" latch in the runtime's
+  state directory; clear it with `python -m src.trading.entry_halt --clear`
+  inside the bot-api pod after verifying the account. `bot_states` is an
+  `emptyDir` here, so the latch and the tracked-position file do not survive a
+  pod replacement; acceptable while staging places no trades.
+
 ## Migrations
 
 Explicit Jobs only; `DB_AUTO_MIGRATE` stays `false`. Job names carry the app

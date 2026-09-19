@@ -1,0 +1,33 @@
+# Runtime secrets added with the audit queue 2 deployment.
+#   BOT_API_TOKEN                  service token the backend presents to the bot
+#                                  API (maps to a superuser principal there), so
+#                                  lifecycle calls do not depend on forwarding
+#                                  end-user tokens.
+#   BOT_CREDENTIALS_ENCRYPTION_KEY base64, 32 bytes. Seals wallet credentials in
+#                                  bot_instances.config. Losing it makes sealed
+#                                  credentials unrecoverable; it is recoverable
+#                                  from this file with the cluster age key.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: executionlab-staging-runtime
+    namespace: executionlab-staging
+type: Opaque
+stringData:
+    BOT_API_TOKEN: ENC[AES256_GCM,data:E27EvMRGdA2zVUvkat01x28LTfMSaRtheyrYx2AMYhVnr8svgsrfOVPMg5u214AkXyEu/+ZXYo7iBkS5OFAGAg==,iv:WZvkUho6YHH6mhEEZnr/JZHPiqE8igqPG7wkoZ8mp14=,tag:T3B1PaYxUYncAzeWRMBgjg==,type:str]
+    BOT_CREDENTIALS_ENCRYPTION_KEY: ENC[AES256_GCM,data:nXIEI/d6+jGbIOMlp3Mjl5uAyy3zVbcenlod3kCjCMKLnCbJBmbGYMfiV0Q=,iv:dwPUSJrMo3+6N0YxFUnSLFCpR/TVXPCDrBTQh48nUg8=,tag:RZwE3c7U3Ie/KGJndBVFeQ==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA0aG43dzg2V0xYR21RdVBF
+            VkZNWnlHMmIyNVZRZ3VQRGtoWlZwNHVVN2tFCkt0VDFQcjM3TEZ4N1R5RThhU2Q3
+            cHhhOHl4dDgvcEN3cWZsTEtyS3VqU3cKLS0tIGJiRElPeVVlY0hhaXo3SHBhbnpw
+            QlNvRmRVNW16RVcwOWgxRFRnVDhDWk0KuHP2cyfUpebcyA6U98NR5GQIzYujEki9
+            McFH1B9Sktj0Gb3KKO5uh3QDPRoGt1sBC9Tz3X1PfOMqy673Hicxfw==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1lm0sz9afv6fdmpqcfsrhcfvkfcw6rgga20mpplrryxwcppfd6glq959w5j
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-09-19T22:06:38Z"
+    mac: ENC[AES256_GCM,data:+DB6/mrYKxfGIsw/MJDkMeAUWZ22eUI28nY2EFue+RUj7r7OAKPz94LIitDJ6jBpsbsC54qydf0smGO3CMU3r4mx3kp712nkI7APTq4KP5UwgzFaYYD1sEVnQtLzEdl9PNj/OR7rPaIkTvTFZmxvGptlW/io3hX+QQWxdC2F6Fw=,iv:auD1aYLj+rspei3TxQb2m7v+L6BYeMPAdrAiQGUKPws=,tag:OyLweYtrdCC3TWSzE9ZDSw==,type:str]
+    version: 3.13.3

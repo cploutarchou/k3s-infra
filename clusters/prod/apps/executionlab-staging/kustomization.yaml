@@ -6,6 +6,7 @@ resources:
   - database.yaml
   - executionlab-staging-db-credentials.sops.yaml
   - executionlab-staging-secret.sops.yaml
+  - executionlab-staging-runtime.sops.yaml
   - config.yaml
   - valkey.yaml
   - migrations.yaml

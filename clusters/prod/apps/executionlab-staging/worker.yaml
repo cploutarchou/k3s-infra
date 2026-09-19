@@ -24,17 +24,19 @@ spec:
       labels:
         app.kubernetes.io/name: worker
       annotations:
-        executionlab/secret-revision: "2026-09-06.2"
+        executionlab/secret-revision: "2026-09-20.1"
     spec:
       containers:
         - name: worker
-          image: ghcr.io/cploutarchou/dydx-trading-bot/worker:staging-c8ae4cbe@sha256:1cb427f7262c1d73ee4fa48c55a6128dc1e8ed79f8b95cf93b45a043d270c4ef
+          image: ghcr.io/cploutarchou/dydx-trading-bot/worker:staging-c7c3a066@sha256:38ae5c669f5c35ea0e28b3222d93bf52705e61d73c77c4019b79c37cc788360f
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: executionlab-config
             - secretRef:
                 name: executionlab-staging
+            - secretRef:
+                name: executionlab-staging-runtime
           # The image bakes APP_ENV=prod; the ConfigMap above overrides it to
           # staging, which is what puts the Go baseline and this runtime on the
           # same environment label.
