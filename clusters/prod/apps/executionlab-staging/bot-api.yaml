@@ -18,6 +18,10 @@ spec:
   # second trader, but the deployment must not rely on that alone.
   strategy:
     type: Recreate
+    # The live object was created as RollingUpdate and still carries the
+    # defaulted rollingUpdate block; the API rejects Recreate next to it.
+    # An explicit null makes server-side apply remove the field.
+    rollingUpdate: null
   selector:
     matchLabels:
       app.kubernetes.io/name: bot-api
