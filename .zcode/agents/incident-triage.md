@@ -1,6 +1,6 @@
 ---
 name: incident-triage
-description: Read-only incident investigator. Use when something is down, degraded, or behaving strangely and you want a diagnosis with evidence before anything is changed. It cannot mutate the cluster or nodes — it only reads, correlates, and reports.
+description: Read-only incident investigator — diagnoses, never mutates. Use when something is down, degraded, or behaving strangely and you want evidence before anything is changed.
 model: inherit
 color: red
 tools:
