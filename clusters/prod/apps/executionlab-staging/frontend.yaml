@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/cploutarchou/dydx-trading-bot/frontend:staging-c7c3a066@sha256:32a379ac831428a75fc5b608f58b9611accc88453158041adf28ef9952d46621
+          image: ghcr.io/cploutarchou/dydx-trading-bot/frontend:staging-cfe57b6e@sha256:e0ce401da247f10dfe1817d36a7a44cb0ce114ee69eea554bd989888f121df53
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

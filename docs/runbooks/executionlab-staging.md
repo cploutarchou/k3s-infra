@@ -107,6 +107,15 @@ Then pin the reported digests in the manifests and commit.
   `emptyDir` here, so the latch and the tracked-position file do not survive a
   pod replacement; acceptable while staging places no trades.
 
+- **Outbound email** is not configured here. From `cfe57b6e` the backend sends
+  through a Plunk project (`POST {api url}/v1/send`), and the API URL, sender,
+  reply-to and project secret key are entered in the app's admin panel
+  (Settings -> Email) and stored in the staging database, the key encrypted
+  with `ENCRYPTION_KEY`. Nothing email-related belongs in this repo's
+  ConfigMap or SOPS secrets. The namespace has no egress NetworkPolicy, so the
+  backend reaches the mail API over its public URL. Until an admin saves the
+  settings, onboarding and password-reset emails are skipped, not failed.
+
 ## Migrations
 
 Explicit Jobs only; `DB_AUTO_MIGRATE` stays `false`. Job names carry the app
