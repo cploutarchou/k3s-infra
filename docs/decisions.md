@@ -54,7 +54,8 @@ Short log of choices that aren't obvious from the manifests.
   one cluster with 1 GB limit, one database per app, WAL-archived to R2.
 - **MCP image is side-loaded, registry push pending (2026-08-31)** — the
   operator's fine-grained PAT has no packages permission, so
-  `ghcr.io/cploutarchou/k3s-infra-mcp` (0.2.0, digest `sha256:5c9d6078…`)
+  `ghcr.io/cploutarchou/k3s-infra-mcp` (0.3.0 since 2026-09-15, digest
+  `sha256:fcd7674b…`; 0.2.0 `sha256:5c9d6078…` before it)
   is imported into containerd on all three nodes (tag + digest refs) via
   `ansible/playbooks/30-sideload-image.yml` instead of being pushed to
   GHCR. The HelmRelease pins the digest with

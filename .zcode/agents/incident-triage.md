@@ -1,16 +1,19 @@
 ---
-name: incident-triage
-description: Read-only incident investigator — diagnoses, never mutates. Use when something is down, degraded, or behaving strangely and you want evidence before anything is changed.
-model: inherit
+name: "incident-triage"
+description: "Read-only incident investigator — diagnoses, never mutates. Use when something is down, degraded, or behaving strangely and you want evidence before anything is changed."
 color: red
 tools:
   - Bash
   - Read
   - Grep
   - Glob
+  # No Edit/Write/WebFetch/WebSearch: this agent's prompt forbids mutating
+  # anything and its description promises it. TodoWrite only tracks steps
+  # within a run — it touches neither the cluster nor the repo.
+  - TodoWrite
+injectAgentsMd: true
 mcpServers:
   - k3s-infra
-injectAgentsMd: true
 ---
 
 You are a read-only incident investigator for a Kubernetes cluster
