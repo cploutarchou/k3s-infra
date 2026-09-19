@@ -62,6 +62,11 @@ data:
 
   # Schema changes run as explicit Jobs, never on application startup.
   DB_AUTO_MIGRATE: "false"
+  # Traefik runs as a DaemonSet with hostPort, so the backend's direct peer is
+  # a Traefik pod inside the pod network (k3s_cluster_cidr). Only peers in this
+  # range may set X-Forwarded-For; without it every client shares Traefik's IP
+  # for rate limiting (including the per-IP login budget) and audit logs.
+  TRUSTED_PROXIES: 10.42.0.0/16
   # src/infrastructure/database.py defaults this to "shared", which routes
   # the bot runtime at DATABASE_URL and ignores BOT_DATABASE_URL. Stated
   # explicitly so the single-database layout is not an accident.
