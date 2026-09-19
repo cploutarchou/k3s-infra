@@ -90,7 +90,12 @@ Then pin the reported digests in the manifests and commit.
     makes sealed credentials unrecoverable**; it is recoverable from the SOPS
     file with the cluster age key. Existing plaintext rows are re-sealed on
     their next write.
-- `bot-api` uses `strategy: Recreate` and a 180 s termination grace period. It
+- `bot-api` rolls with `maxSurge: 0` / `maxUnavailable: 1` (old pod stopped
+  before the new one is created) and a 180 s termination grace period.
+  `Recreate` is not usable on the existing object: its API-defaulted
+  `rollingUpdate` block cannot be removed by server-side apply. The new pod can
+  start while the old one is still terminating; the advisory lock below covers
+  that window. It
   supervises trading runtimes as child processes; a runtime finishes the pair
   it is building on SIGTERM. The app also takes a PostgreSQL session-level
   advisory lock per instance id, which needs the **direct** `postgres-rw`

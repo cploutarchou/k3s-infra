@@ -11,17 +11,24 @@ metadata:
     app.kubernetes.io/name: bot-api
 spec:
   replicas: 1
-  # bot-api supervises trading runtimes as child processes of this pod. A
-  # rolling update would start the replacement before the old pod (and its
-  # children) stopped: two supervisors for the same instances. The app also
-  # takes a per-instance PostgreSQL advisory lock, which would refuse the
-  # second trader, but the deployment must not rely on that alone.
+  # bot-api supervises trading runtimes as child processes of this pod, so the
+  # old pod is stopped before the replacement is created: maxSurge 0 with
+  # maxUnavailable 1 on a single replica.
+  #
+  # This is RollingUpdate rather than Recreate on purpose. The live object was
+  # created as RollingUpdate and holds an API-defaulted rollingUpdate block
+  # that no field manager owns, so server-side apply cannot remove it, and the
+  # API forbids that block next to type Recreate ("rollingUpdate: null" is
+  # ignored by server-side apply; tried in 40f64e4).
+  #
+  # Unlike Recreate, the replacement can start while the old pod is still
+  # terminating (up to the grace period below). The per-instance PostgreSQL
+  # advisory lock is what stops a second trader during that window.
   strategy:
-    type: Recreate
-    # The live object was created as RollingUpdate and still carries the
-    # defaulted rollingUpdate block; the API rejects Recreate next to it.
-    # An explicit null makes server-side apply remove the field.
-    rollingUpdate: null
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: bot-api
