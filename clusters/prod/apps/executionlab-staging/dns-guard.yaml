@@ -35,10 +35,16 @@ data:
     MAIL_FROM_DOMAIN = "plunk.executionlab.io"
     MAIL_FROM_MX_HOSTS = {"feedback-smtp.eu-central-1.amazonses.com."}
     # SES Easy DKIM publishes three CNAMEs <token>._domainkey -> <token>.dkim.amazonses.com.
-    # The tokens are shown on the Plunk project's domain page and in the SES
-    # console (verified identity -> DKIM). While this list is empty the check
-    # fails on purpose, so the gap stays visible.
-    SES_DKIM_TOKENS = []
+    # The tokens are public DNS labels, not secrets. They come from SES:
+    #   aws ses get-identity-dkim-attributes --identities executionlab.io \
+    #     --region eu-central-1
+    # (also shown on the Plunk project's domain page). They change only if Easy
+    # DKIM is regenerated for the identity; an empty list fails on purpose.
+    SES_DKIM_TOKENS = [
+        "hrydieosne7cljqom6uasfedd6d6t7qe",
+        "osx63rb2sodf63gjez4svx2dh4misfvo",
+        "57wpmyoenshynj37efjhj2wzgq2r7wpf",
+    ]
 
     resolver = dns.resolver.Resolver(configure=False)
     resolver.nameservers = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
