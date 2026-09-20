@@ -24,12 +24,20 @@ data:
 
     NODE_IPS = {"159.195.82.201", "159.195.81.219", "159.195.80.83"}
     # Mail moved from Cloudflare Email Routing to AWS SES (eu-central-1) on
-    # 2026-09-14/15: SES receives (MX) and sends (SPF + Easy DKIM).
+    # 2026-09-14/15. SES receives (apex MX). Outbound mail is sent by the
+    # self-hosted Plunk (namespace mailnexus), which delivers through SES.
     MX_HOSTS = {"inbound-smtp.eu-central-1.amazonaws.com."}
     SPF_INCLUDE = "amazonses.com"
+    # Plunk registers a custom MAIL FROM domain with SES. That subdomain, not
+    # the apex, is the envelope sender SPF is evaluated against, and it aligns
+    # with executionlab.io for DMARC. Losing either record silently breaks SPF
+    # for every message the platform sends.
+    MAIL_FROM_DOMAIN = "plunk.executionlab.io"
+    MAIL_FROM_MX_HOSTS = {"feedback-smtp.eu-central-1.amazonses.com."}
     # SES Easy DKIM publishes three CNAMEs <token>._domainkey -> <token>.dkim.amazonses.com.
-    # The tokens come from the SES console (verified identity -> DKIM). While
-    # this list is empty the check fails on purpose, so the gap stays visible.
+    # The tokens are shown on the Plunk project's domain page and in the SES
+    # console (verified identity -> DKIM). While this list is empty the check
+    # fails on purpose, so the gap stays visible.
     SES_DKIM_TOKENS = []
 
     resolver = dns.resolver.Resolver(configure=False)
@@ -41,6 +49,10 @@ data:
     def lookup(name, rtype):
         try:
             return [r.to_text().strip('"') for r in resolver.resolve(name, rtype)]
+        except dns.resolver.NoAnswer:
+            # The name exists but has no record of this type: an empty answer,
+            # which each check below reports in its own terms.
+            return []
         except Exception as exc:
             failures.append(f"{rtype} {name}: lookup failed ({type(exc).__name__})")
             return None
@@ -52,9 +64,26 @@ data:
         if hosts != MX_HOSTS:
             failures.append(f"MX executionlab.io: expected {sorted(MX_HOSTS)}, got {sorted(hosts)}")
 
-    # SPF. Exactly one record — two is invalid under RFC 7208 and is the
-    # state this zone was in before the records vanished. Sending goes
-    # through SES, so the record must authorise it.
+    # Outbound: the MAIL FROM subdomain must route bounces to SES and carry
+    # exactly one SPF record that authorises it.
+    mail_from_mx = lookup(MAIL_FROM_DOMAIN, "MX")
+    if mail_from_mx is not None:
+        hosts = {entry.split()[-1].lower() for entry in mail_from_mx}
+        if hosts != MAIL_FROM_MX_HOSTS:
+            failures.append(f"MX {MAIL_FROM_DOMAIN}: expected {sorted(MAIL_FROM_MX_HOSTS)}, got {sorted(hosts)}")
+
+    mail_from_txt = lookup(MAIL_FROM_DOMAIN, "TXT")
+    if mail_from_txt is not None:
+        spf = [t for t in mail_from_txt if t.lower().startswith("v=spf1")]
+        if len(spf) != 1:
+            failures.append(f"TXT {MAIL_FROM_DOMAIN}: expected one SPF record, got {len(spf)}")
+        elif SPF_INCLUDE not in spf[0]:
+            failures.append(f"TXT {MAIL_FROM_DOMAIN}: SPF does not include {SPF_INCLUDE}: {spf[0]}")
+
+    # Apex SPF. Platform mail does not depend on it (see MAIL FROM above), but
+    # a domain with no SPF record gives receivers nothing to reject spoofed
+    # apex senders with. Exactly one record — two is invalid under RFC 7208
+    # and is the state this zone was in before the records vanished.
     apex_txt = lookup("executionlab.io", "TXT")
     if apex_txt is not None:
         spf = [t for t in apex_txt if t.lower().startswith("v=spf1")]
@@ -68,7 +97,7 @@ data:
     # DKIM: SES Easy DKIM, one CNAME per token.
     if not SES_DKIM_TOKENS:
         failures.append("DKIM: SES_DKIM_TOKENS is empty in the dns-guard ConfigMap; "
-                        "fill in the three selectors from the SES console")
+                        "fill in the three selectors from the Plunk domain page or the SES console")
     for token in SES_DKIM_TOKENS:
         name = f"{token}._domainkey.executionlab.io"
         want = f"{token}.dkim.amazonses.com."
@@ -94,7 +123,7 @@ data:
         for line in failures:
             print(f"FAIL {line}", file=sys.stderr)
         sys.exit(1)
-    print("ok: mail (SES MX/SPF/DKIM, DMARC) and both staging hosts resolve as expected")
+    print("ok: mail (SES MX, Plunk MAIL FROM, SPF, DKIM, DMARC) and both staging hosts resolve as expected")
 ---
 apiVersion: batch/v1
 kind: CronJob
