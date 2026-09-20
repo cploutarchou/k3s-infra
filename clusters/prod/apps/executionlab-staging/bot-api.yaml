@@ -45,7 +45,7 @@ spec:
       terminationGracePeriodSeconds: 180
       containers:
         - name: bot-api
-          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-cfe57b6e@sha256:4998ccf1823ccd3988248c5c6249fb8c9eff81c602a73aee4c42126eabd7776b
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-9ffd7a50@sha256:4998ccf1823ccd3988248c5c6249fb8c9eff81c602a73aee4c42126eabd7776b
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
