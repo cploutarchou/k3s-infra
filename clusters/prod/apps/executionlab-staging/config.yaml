@@ -84,6 +84,10 @@ data:
 
   # Disabled subsystems
   NATS_ENABLED: "false"
+  # Must be set alongside NATS_ENABLED: the bot's backtest event emitter treats
+  # either flag as "on" and used to default this one to true, which made every
+  # Celery backtest dial a NATS server that does not exist and hang at 0%.
+  BOT_COMMAND_BUS_ENABLED: "false"
   BACKTEST_CLICKHOUSE_WRITES_ENABLED: "false"
   BACKTEST_MINIO_ARTIFACTS_ENABLED: "false"
   BACKTEST_ARTIFACT_STORAGE_ENABLED: "true"
