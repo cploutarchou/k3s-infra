@@ -37,7 +37,7 @@ spec:
       labels:
         app.kubernetes.io/name: bot-api
       annotations:
-        executionlab/secret-revision: "2026-09-20.2"
+        executionlab/secret-revision: "2026-09-20.3"
     spec:
       # SIGTERM asks a runtime to finish the pair it is building (both legs, or
       # its emergency cleanup) and open nothing new. One entry with cleanup can

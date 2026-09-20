@@ -6,8 +6,8 @@
 #   - PgBouncer dropped; workloads talk to the CNPG postgres-rw service directly.
 #   - ClickHouse dropped (BACKTEST_CLICKHOUSE_WRITES_ENABLED is false upstream).
 #   - MinIO dropped; backtest artifacts use the local filesystem fallback.
-#   - NATS disabled; the backend's publisher dials lazily, so nothing breaks
-#     at boot and Celery remains the authoritative backtest executor.
+#   - NATS runs in-namespace (nats.yaml) for durable backtest events. Celery
+#     remains the authoritative backtest executor, so the command bus stays off.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -82,12 +82,16 @@ data:
   CELERY_BROKER_URL: redis://valkey:6379/1
   CELERY_RESULT_BACKEND: redis://valkey:6379/2
 
-  # Disabled subsystems
-  NATS_ENABLED: "false"
-  # Must be set alongside NATS_ENABLED: the bot's backtest event emitter treats
-  # either flag as "on" and used to default this one to true, which made every
-  # Celery backtest dial a NATS server that does not exist and hang at 0%.
+  # NATS JetStream (nats.yaml): durable backtest lifecycle/progress events.
+  NATS_ENABLED: "true"
+  NATS_URL: nats://nats:4222
+  NATS_MONITORING_URL: http://nats:8222
+  NATS_STREAM_PREFIX: bot
+  # Stays false while Celery owns backtest execution: turning it on lets a NATS
+  # command worker replay a Celery-owned run, executing the backtest twice.
   BOT_COMMAND_BUS_ENABLED: "false"
+
+  # Disabled subsystems
   BACKTEST_CLICKHOUSE_WRITES_ENABLED: "false"
   BACKTEST_MINIO_ARTIFACTS_ENABLED: "false"
   BACKTEST_ARTIFACT_STORAGE_ENABLED: "true"

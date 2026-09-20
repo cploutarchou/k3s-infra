@@ -9,6 +9,7 @@ resources:
   - executionlab-staging-runtime.sops.yaml
   - config.yaml
   - valkey.yaml
+  - nats.yaml
   - migrations.yaml
   - backend.yaml
   - bot-api.yaml
