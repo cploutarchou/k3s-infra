@@ -21,7 +21,7 @@ spec:
       labels:
         app.kubernetes.io/name: backend
       annotations:
-        executionlab/secret-revision: "2026-09-20.1"
+        executionlab/secret-revision: "2026-09-20.3"
     spec:
       containers:
         - name: backend
