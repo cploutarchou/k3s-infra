@@ -105,6 +105,11 @@ data:
   WORKER_MODE: celery
   CELERY_QUEUES: backtests,default,scheduled
   CELERY_CONCURRENCY: "2"
+  # Recycle a prefork child after every task. Each backtest leaves ~100-200Mi
+  # resident in its child, and with the default of 100 tasks per child that
+  # growth accumulated until the container hit its memory limit. A new child
+  # is forked from the warm parent, so this costs about a second per task.
+  CELERY_WORKER_MAX_TASKS_PER_CHILD: "1"
 
   # Execution safety, set explicitly rather than relying on defaults.
   # BOT_PLACE_TRADES gates open_positions() in bot/main.py; IS_TESTNET keeps
