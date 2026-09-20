@@ -123,7 +123,7 @@ spec:
             - name: check
               # Reuses the bot API image purely because it already carries
               # dnspython and is side-loaded on every node — no extra pull.
-              image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-525be91b@sha256:27030cfcb8af79e115a7ad8e9c371d93d9b76ebb1d7323950bae64eb00af2ad1
+              image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-c5e6d55b@sha256:7b48ba89bf8ca50e3607c8846a6f3ecb6db4e125dfea4c2de527fb776d3ffce4
               imagePullPolicy: IfNotPresent
               command: ["python", "/opt/dns-guard/check.py"]
               volumeMounts:
