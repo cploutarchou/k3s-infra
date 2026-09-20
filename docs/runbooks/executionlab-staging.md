@@ -198,11 +198,21 @@ which is a resolution loop. If something genuinely needs to send mail from
 `dns-guard.yaml` runs hourly and fails if mail delivery or either staging
 host stops resolving as expected, including if a second SPF record
 reappears. Since the move to AWS SES it expects: MX
-`inbound-smtp.eu-central-1.amazonaws.com`, exactly one SPF record that
+`inbound-smtp.eu-central-1.amazonaws.com`, exactly one apex SPF record that
 includes `amazonses.com`, one CNAME per SES Easy-DKIM token
 (`<token>._domainkey` → `<token>.dkim.amazonses.com`, tokens listed in
 `SES_DKIM_TOKENS` inside the ConfigMap; an empty list is a deliberate
-failure), and a well-formed DMARC record. Failures surface on the "k3s Applications"
+failure), and a well-formed DMARC record.
+
+Outbound mail is sent by the self-hosted Plunk (namespace `mailnexus`), which
+delivers through SES with the custom MAIL FROM domain `plunk.executionlab.io`.
+That subdomain, not the apex, is the envelope sender SPF is evaluated against,
+so the guard also expects `plunk.executionlab.io` to carry MX
+`feedback-smtp.eu-central-1.amazonses.com` and exactly one SPF record that
+includes `amazonses.com`. Platform mail therefore does not depend on the apex
+SPF record; that one exists so receivers can reject spoofed apex senders.
+
+Failures surface on the "k3s Applications"
 dashboard under "time since last success" and "failed jobs by CronJob"; those
 panels are namespace-scoped, so no dashboard change was needed. It resolves
 against public recursive resolvers rather than the Cloudflare API, so it tests
@@ -267,8 +277,12 @@ Mail for this zone moved from Cloudflare Email Routing to AWS SES
 (eu-central-1) on 2026-09-14/15, deliberately: the MX now points at
 `inbound-smtp.eu-central-1.amazonaws.com`, the Cloudflare SPF include and
 the `cf2024-1` DKIM record are gone, and the DMARC record (`p=none`,
-Cloudflare reporting address) remains. Sending via SES needs an SPF record
-with `include:amazonses.com` and the three Easy-DKIM CNAMEs; the guard
-stays red until they exist. `external-dns` deliberately does **not** manage
+Cloudflare reporting address) remains. As of 2026-09-20 the sending side is
+complete: SES reports Easy DKIM for `executionlab.io` as enabled and verified,
+the three `<token>._domainkey` CNAMEs resolve and are listed in the guard, and
+the MAIL FROM subdomain `plunk.executionlab.io` has its MX and SPF records.
+The one remaining gap is the apex SPF record (`v=spf1 include:amazonses.com
+~all`), which was never recreated after the migration; the guard stays red
+until it exists. `external-dns` deliberately does **not** manage
 `executionlab.io` — its policy is `sync` — and both Ingresses carry
 `external-dns.alpha.kubernetes.io/exclude`.
