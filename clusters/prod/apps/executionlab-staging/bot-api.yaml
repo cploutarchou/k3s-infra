@@ -45,7 +45,7 @@ spec:
       terminationGracePeriodSeconds: 180
       containers:
         - name: bot-api
-          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-0d88f1d5@sha256:baab5bf87f944441f1c8c31a174592b49617d4f9891d8bd47ecd7dfc77958b84
+          image: ghcr.io/cploutarchou/dydx-trading-bot/api:staging-6b1cd557@sha256:fc6b14f19aa7f4001124a632e21369993f67a97148d2c1aee5c8902eb9f13b12
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -76,13 +76,18 @@ spec:
               mountPath: /var/lib/dydx/backtest-artifacts
             - name: states
               mountPath: /app/bot_states
+          # Live strategy runtimes are child processes of this container
+          # (BotInstanceManager spawns main_instance.py), each roughly
+          # 200-300Mi on top of the API's ~240Mi. At 768Mi a second running bot
+          # would get the whole container OOM-killed, which also takes the
+          # backend's readiness (and therefore login) down with it.
           resources:
             requests:
               cpu: 150m
               memory: 384Mi
             limits:
               cpu: 800m
-              memory: 768Mi
+              memory: 1536Mi
       volumes:
         - name: artifacts
           emptyDir: {}
