@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: ghcr.io/cploutarchou/dydx-trading-bot/worker:staging-b60467d9@sha256:d139bd0cf28b0385ce9ea9b825bde645450b871203786b232e8457a432fa339e
+          image: ghcr.io/cploutarchou/dydx-trading-bot/worker:staging-4a6014cf@sha256:679d56728eb13f2a8b20aef8c587162a960e9e16dd1385412b01814ad528e2c5
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
