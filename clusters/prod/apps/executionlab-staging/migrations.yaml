@@ -6,7 +6,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: backend-migrate-4fa3969e
+  name: backend-migrate-7720b527
   namespace: executionlab-staging
   labels:
     app.kubernetes.io/name: backend-migrate
@@ -21,7 +21,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/cploutarchou/dydx-trading-bot/backend-migrator:staging-4fa3969e@sha256:06f55c0fcdc26e204f310bc952671f7d04a1ce77d1fe3cb9e77a50ef69ff8c2e
+          image: ghcr.io/cploutarchou/dydx-trading-bot/backend-migrator:staging-7720b527@sha256:089fadf6a940250725657e9e395de28d9c99ca8490a5499dc7074744230bea3f
           imagePullPolicy: IfNotPresent
           args: ["up"]
           envFrom:
