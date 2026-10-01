@@ -1,0 +1,18 @@
+---
+# Recorded market data (append-only, checksummed datasets; about 2.1 GB a
+# day measured on 2026-10-01). Same trade-off as signwise: local-path pins
+# the pod to one node, so losing that node stops polyedge until it returns.
+# 100Gi holds roughly 45 days until datasets are archived to R2
+# (polyedge-datasets bucket) and pruned locally.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: polyedge-datasets
+  namespace: polyedge
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 100Gi
