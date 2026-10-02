@@ -38,18 +38,23 @@ venue exists in this build and `LIVE_ALLOWED` is false. Manifests:
   (metrics, health); egress only to DNS, the CNPG pods on 5432 and TCP 443
   to public addresses (market-data feeds).
 
-## First login
+## Admin access
 
-The bootstrap admin is created on the first start while no users exist:
+The first admin was bootstrapped on 2026-10-02 and the
+`POLYEDGE_BOOTSTRAP_ADMIN_*` keys were then removed from the secret. Manage
+users and passwords in the UI at `/settings/users` ("Reset password…",
+ADMIN only); a password change ends that user's sessions.
 
-```bash
-sops -d clusters/prod/apps/polyedge/polyedge-secret.sops.yaml | grep BOOTSTRAP
-```
+The app creates a bootstrap admin only while the users table is empty, so
+this matters only after the database is rebuilt. Then either:
 
-Log in at https://polyedge.cpdevlab.com, then remove
-`POLYEDGE_BOOTSTRAP_ADMIN_EMAIL` and `POLYEDGE_BOOTSTRAP_ADMIN_PASSWORD` from
-the secret (`sops clusters/prod/apps/polyedge/polyedge-secret.sops.yaml`) and
-bump `polyedge/secret-revision` in `deployment.yaml` in the same commit.
+- add both keys back (`sops clusters/prod/apps/polyedge/polyedge-secret.sops.yaml`;
+  the password needs at least 12 characters), bump `polyedge/secret-revision`
+  in `deployment.yaml`, log in, and remove the keys again with
+  `sops unset ... '["stringData"]["POLYEDGE_BOOTSTRAP_ADMIN_EMAIL"]'` and
+  `'["stringData"]["POLYEDGE_BOOTSTRAP_ADMIN_PASSWORD"]'` plus another bump; or
+- create one from the CLI (operator only, a cluster write), password on stdin:
+  `kubectl -n polyedge exec -i deploy/polyedge -- polyedged user create --email EMAIL --role ADMIN`
 
 ## Releasing a new version
 
