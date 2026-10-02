@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: polyedge
+  namespace: polyedge
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: polyedge
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    # Private Prometheus endpoint (no auth): scraped by VictoriaMetrics,
+    # never routed by an Ingress.
+    - name: metrics
+      port: 9090
+      targetPort: metrics

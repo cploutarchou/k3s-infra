@@ -1,0 +1,18 @@
+---
+# Declarative database on the shared CNPG cluster (one database per app,
+# no ad-hoc database containers). The `polyedge` role is a managed role on
+# the Cluster spec (infrastructure/configs/postgres/cluster.yaml); its
+# password lives in polyedge-db-credentials.sops.yaml in the databases
+# namespace. The app needs to own its database: migrations create
+# schema_migrations and run under a session advisory lock, so it connects
+# to postgres-rw directly (no transaction pooler).
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: polyedge
+  namespace: databases
+spec:
+  cluster:
+    name: postgres
+  name: polyedge
+  owner: polyedge

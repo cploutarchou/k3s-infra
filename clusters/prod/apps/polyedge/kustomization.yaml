@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - database.yaml
+  - polyedge-db-credentials.sops.yaml
+  - polyedge-secret.sops.yaml
+  - ghcr-pull-secret.sops.yaml
+  - config.yaml
+  - datasets-pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - networkpolicy.yaml

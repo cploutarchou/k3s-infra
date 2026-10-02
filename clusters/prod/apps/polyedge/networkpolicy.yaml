@@ -1,0 +1,82 @@
+---
+# Ingress: the UI/API only from Traefik, metrics only from monitoring
+# (VictoriaMetrics, Uptime Kuma). Probes come from the local kubelet, which
+# kube-router (the k3s policy controller) always permits.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: polyedge-ingress
+  namespace: polyedge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: polyedge
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+      ports:
+        - port: http
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: http
+        - port: metrics
+---
+# Egress: cluster DNS, the shared PostgreSQL cluster, and HTTPS/WSS to the
+# public market-data endpoints (Polymarket, Binance, Coinbase). Those sit
+# behind CDNs, so the internet rule is port 443 to public addresses rather
+# than a host list.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: polyedge-egress
+  namespace: polyedge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: polyedge
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: databases
+          podSelector:
+            matchLabels:
+              cnpg.io/cluster: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+      ports:
+        - protocol: TCP
+          port: 443

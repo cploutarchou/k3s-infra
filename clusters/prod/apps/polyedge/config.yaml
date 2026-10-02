@@ -1,0 +1,27 @@
+---
+# Non-secret settings (docs/OPERATIONS.md in the app repo). Listener
+# addresses, the data and UI directories come from the image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: polyedge
+  namespace: polyedge
+data:
+  POLYEDGE_ALLOWED_ORIGINS: https://polyedge.cpdevlab.com
+  # Traefik pods (pod CIDR) are the only proxy in front of the app. Behind
+  # Cloudflare, Traefik rewrites X-Forwarded-For to the edge address, so the
+  # client comes from CF-Connecting-IP, which is safe because the ingress
+  # only accepts Cloudflare's ranges (ingress.yaml).
+  POLYEDGE_TRUSTED_PROXIES: 10.42.0.0/16
+  POLYEDGE_CLIENT_IP_HEADER: CF-Connecting-IP
+  POLYEDGE_LOG_LEVEL: info
+  POLYEDGE_RECORD: "true"
+  # Paper trading only: no live venue exists in this build and the process
+  # refuses live activation unless this is true.
+  LIVE_ALLOWED: "false"
+  # Resume the paper account after every restart.
+  POLYEDGE_AUTOSTART_ACCOUNTS: paper
+  POLYEDGE_AUTOSTART_BANKROLL: "1000"
+  # About 90% of the memory limit, so the Go GC works harder before the
+  # kernel OOM-kills the pod.
+  GOMEMLIMIT: 1380MiB

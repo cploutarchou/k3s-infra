@@ -55,6 +55,11 @@ spec:
         login: true
         passwordSecret:
           name: signwise-db-credentials
+      - name: polyedge
+        ensure: present
+        login: true
+        passwordSecret:
+          name: polyedge-db-credentials
 
   postgresql:
     parameters:
