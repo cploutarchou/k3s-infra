@@ -47,7 +47,7 @@ spec:
         # Forward-only, idempotent migrations under an advisory lock. `serve`
         # would also migrate, but a separate step fails visibly.
         - name: migrate
-          image: ghcr.io/cploutarchou/polyedge:sha-f38600dc0d98@sha256:d8dbca176e5d4d0bdf57e3c517a78acbf2bfebe3f5927d3e58114e965c0be4d7
+          image: ghcr.io/cploutarchou/polyedge:sha-0123aeef3744@sha256:d735dbf488e5fa067ae4ac226df73ede281751324dbc95f5905cb7265e383da3
           imagePullPolicy: IfNotPresent
           args: ["migrate"]
           envFrom:
@@ -67,7 +67,7 @@ spec:
               memory: 256Mi
       containers:
         - name: polyedged
-          image: ghcr.io/cploutarchou/polyedge:sha-f38600dc0d98@sha256:d8dbca176e5d4d0bdf57e3c517a78acbf2bfebe3f5927d3e58114e965c0be4d7
+          image: ghcr.io/cploutarchou/polyedge:sha-0123aeef3744@sha256:d735dbf488e5fa067ae4ac226df73ede281751324dbc95f5905cb7265e383da3
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           ports:
