@@ -56,6 +56,33 @@ this matters only after the database is rebuilt. Then either:
 - create one from the CLI (operator only, a cluster write), password on stdin:
   `kubectl -n polyedge exec -i deploy/polyedge -- polyedged user create --email EMAIL --role ADMIN`
 
+## MCP connector (API tokens)
+
+The app serves the Model Context Protocol at `https://polyedge.cpdevlab.com/mcp`
+(app repo `docs/API.md` "MCP endpoint", `docs/OPERATIONS.md` §8) so an AI
+agent can read the platform and run the operator actions the console
+offers, as one user, under that user's role and audit trail. Nothing on
+the cluster side: same host, same ingress, same Cloudflare allow-list.
+
+1. In the console (`/settings/users`, ADMIN) create a dedicated user for
+   the agent with the role it should have (`RESEARCHER` reads and runs
+   backtests, `TRADER` also changes strategies and starts or stops the
+   paper account, `RISK_MANAGER` also changes limits and resets breakers).
+   Never `ADMIN`: the app refuses tokens for admins.
+2. Issue a token under "API tokens" on the same page (shown once). If the
+   console is unavailable, from the CLI (operator only, a cluster write):
+   `kubectl -n polyedge exec deploy/polyedge -- polyedged token create --email EMAIL --name NAME`
+3. Add a custom connector in the agent's client with the URL above and the
+   token as its API key. The handshake works before the key is set; tool
+   calls do not.
+4. Rotate by issuing a new token and revoking the old one in the console;
+   revocation is immediate. Disabling the user or changing its role revokes
+   its tokens.
+
+The agent can never release the emergency stop, activate live trading,
+manage users, credentials or tokens, or promote an experiment, whatever
+the role.
+
 ## Releasing a new version
 
 The app repo's `Release image` workflow runs after CI passes on `master`
