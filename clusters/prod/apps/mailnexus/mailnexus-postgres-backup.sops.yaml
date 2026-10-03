@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: mailnexus-postgres-backup
+    namespace: mailnexus
+type: Opaque
+stringData:
+    BACKUP_PASSPHRASE: ENC[AES256_GCM,data:DJHeI2frPukk+R0=,iv:Tj4MxJcKOacxjDdmUTqB7ZmMC5WfWn8YxWhh4jopH0g=,tag:cht+6spqRhGedOPS44n2FQ==,type:str]
+    RCLONE_CONFIG_R2_ACCESS_KEY_ID: ENC[AES256_GCM,data:SZ4Jy8rLEwpojmNeQ1CwVOlhJXfMXrw7B2K2IO0/Z5w=,iv:/cQ62xjX4K2Nk3OtsaYgZw4rrEmhB64V2qm+JsskqU4=,tag:aPs4nGrmfidPLKiVRNdZ1g==,type:str]
+    RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:cph1dvDdj7kJOepgolCwShVOtonutv+8NjFI+nUzrWlZ0n1rZPDSN+0dlHb0QFOb2ambDXRV9g019USGVIkeOA==,iv:fpi7V3XPPA3VbGzB4ezvBfRZfGSc7A4XjsG2ySVCsR8=,tag:5rjWJkY0oiG3QV/sgQn7BQ==,type:str]
+    HEARTBEAT_URL: ENC[AES256_GCM,data:ZIx8Buv8UMcXiiPUGPYFmMBDOMcgIvVgv2wjfZt7zmDgtUTD/s14XAzpYqI/PQwOrpRZ7O4oFjjQAoe7DKglEu2vwDyQVqME8V09,iv:3pO2vZc2X3wlT6Gfa6+AZxiJ1nlRvIdjDNpnc1HD+nY=,tag:lLfTCGvy+D0drmi9Xgqz8A==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBwZThpWnZndGNpVTJTUWlS
+            d0FGcmhvaE81SXBFejdBUFlicHhpWm93WVQ4CkJhRTdQME05eFg3cStMbVlPOVJE
+            WnRXYmNOdVN0NS9qanNZeFYwOEdXVFEKLS0tIEVpNXRsRG1VakZRMS9DS09KYzRa
+            Y25WOFlMUS9mVlZ3QWhOUTFOZjJkUFkKmmPVPEJv4CN+M4ApYASCjoDHwv9xmviW
+            0v9o1DsJROHYMW86OvVMn8z6dR5kJTImDkVSgQ1ABjMX8kZ6ctq1cg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1lm0sz9afv6fdmpqcfsrhcfvkfcw6rgga20mpplrryxwcppfd6glq959w5j
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T21:06:17Z"
+    mac: ENC[AES256_GCM,data:AbYE6wFMHlRmhTfRBoWXJVrJ7WWak+bFwtvwiavUILH1l9pWXG+Xp8s+otJPhyuf5ytxK0xD7AyoXdkNxii9WxBYM++6FDZYrZQHBX7CADRxZ3XirYEN3bIZJ7LZhdof/4TyCFf0usvXYdD9MmKMQgfQHxiN2P0/c0X0nnN2EgI=,iv:+B84k/p+MnLcIC3Chou9jy5YbvobpCGPUvRsDgaq4UA=,tag:JLW+dRrPdcRUjxhcj0y/Lw==,type:str]
+    version: 3.13.3

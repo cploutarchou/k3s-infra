@@ -1,0 +1,135 @@
+---
+# PostgreSQL accepts the backup job on 5432. A policy of its own rather
+# than an edit of allow-datastores-from-plunk: that one opens every
+# datastore port to every source it lists. The k3s policy controller
+# (kube-router) enforces these policies on this cluster.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-from-backup
+  namespace: mailnexus
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: mailnexus-postgres-backup
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+# The backup job accepts no connections and reaches only cluster DNS,
+# PostgreSQL, R2 over HTTPS (public addresses, port 443) and Uptime
+# Kuma's push endpoint (pod port 3001; the Service listens on 80).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mailnexus-postgres-backup
+  namespace: mailnexus
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mailnexus-postgres-backup
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: uptime-kuma
+      ports:
+        - protocol: TCP
+          port: 3001
+---
+# The restore test accepts no connections and never reaches the live
+# database: cluster DNS, R2 over HTTPS and Uptime Kuma only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mailnexus-postgres-restore-test
+  namespace: mailnexus
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mailnexus-postgres-restore-test
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: uptime-kuma
+      ports:
+        - protocol: TCP
+          port: 3001

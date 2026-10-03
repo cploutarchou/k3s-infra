@@ -1,0 +1,196 @@
+---
+# Weekly restore test of mailnexus's PostgreSQL backups: fetches the
+# newest complete backup from R2, restores it into a throwaway PostgreSQL
+# 16 inside the pod (emptyDir, Unix socket only, never the live database),
+# and checks it: SHA-256 against the manifest, table count against the
+# manifest and at least 19 (Plunk 0.14.0's schema), applied Prisma
+# migrations, and at least one user and one project. Fails as well when
+# the newest backup is more than 30 h old. Only a passing test sends its
+# heartbeat (a separate Uptime Kuma push monitor).
+#
+# Steps: pg-restore-test-fetch.sh (rclone), pg-restore-test.sh
+# (postgres:16.9-bookworm), pg-restore-test-report.sh (rclone, for wget).
+# Credentials: mailnexus-restore-test holds an R2 token with Object Read
+# only on mailnexus-backups, under rclone's key names, and an optional
+# HEARTBEAT_URL; BACKUP_PASSPHRASE comes from mailnexus-postgres-backup.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mailnexus-postgres-restore-test
+  namespace: mailnexus
+  labels:
+    app.kubernetes.io/name: mailnexus-postgres-restore-test
+    app.kubernetes.io/part-of: mailnexus
+spec:
+  schedule: "15 5 * * 0" # Sundays 05:15 UTC, after that night's backup
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 7200
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 1209600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: mailnexus-postgres-restore-test
+            app.kubernetes.io/part-of: mailnexus
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: fetch
+              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "/scripts/pg-restore-test-fetch.sh"]
+              env:
+                - name: WORK_DIR
+                  value: /work
+                - name: BACKUP_REMOTE
+                  value: r2:mailnexus-backups
+                - name: MAX_AGE_HOURS
+                  value: "30"
+                - name: RCLONE_CONFIG_R2_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_R2_PROVIDER
+                  value: Cloudflare
+                - name: RCLONE_CONFIG_R2_REGION
+                  value: auto
+                - name: RCLONE_CONFIG_R2_ENDPOINT
+                  value: https://035087c37abeda0a744ab1c4c482d19f.eu.r2.cloudflarestorage.com
+                - name: RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_RETRIES
+                  value: "3"
+                - name: RCLONE_LOW_LEVEL_RETRIES
+                  value: "10"
+                - name: RCLONE_CONTIMEOUT
+                  value: 30s
+                - name: RCLONE_TIMEOUT
+                  value: 5m
+                - name: RCLONE_CONFIG
+                  value: ""
+                - name: HOME
+                  value: /tmp
+                - name: RCLONE_CACHE_DIR
+                  value: /tmp/rclone-cache
+                - name: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-restore-test
+                      key: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                - name: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-restore-test
+                      key: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+            - name: restore
+              image: postgres:16.9-bookworm@sha256:253815cf7579ffa05e1673d92e78d37273e61be0e4414e9a1449337d7925be94
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/bash", "/scripts/pg-restore-test.sh"]
+              env:
+                - name: WORK_DIR
+                  value: /work
+                - name: HOME
+                  value: /work
+                - name: MIN_TABLES
+                  value: "19"
+                - name: BACKUP_PASSPHRASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-postgres-backup
+                      key: BACKUP_PASSPHRASE
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+          containers:
+            - name: report
+              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "/scripts/pg-restore-test-report.sh"]
+              env:
+                - name: WORK_DIR
+                  value: /work
+                - name: HEARTBEAT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-restore-test
+                      key: HEARTBEAT_URL
+                      optional: true
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                  readOnly: true
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
+          volumes:
+            # The fetched (encrypted) backup and the throwaway data
+            # directory; the restored data is plaintext, so the volume
+            # lives only as long as the pod.
+            - name: work
+              emptyDir:
+                sizeLimit: 4Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+            - name: scripts
+              configMap:
+                name: mailnexus-postgres-backup
+                defaultMode: 0444

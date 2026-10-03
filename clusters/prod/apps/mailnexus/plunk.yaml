@@ -1,0 +1,95 @@
+---
+# Plunk: API, dashboard and email workers. Recreate, because its data
+# volume is ReadWriteOnce. It reads mailnexus-config and mailnexus-secrets
+# only at startup: bump mailnexus.io/config-revision to restart it after
+# changing either.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: plunk
+  namespace: mailnexus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: plunk
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: plunk
+      annotations:
+        mailnexus.io/config-revision: 2026-10-03-r2-uploads
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: mailnexus-config
+        - secretRef:
+            name: mailnexus-secrets
+        image: ghcr.io/useplunk/plunk:0.14.0@sha256:82784a77c97269a198778e6f5c50a4385356eee36d1b2928c281b9100ae2ec7a
+        livenessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /health
+            port: api
+          periodSeconds: 10
+        name: plunk
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 8080
+          name: api
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: api
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 24
+          httpGet:
+            path: /health
+            port: api
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /app/data
+          name: data
+      nodeSelector:
+        mailnexus.io/data: 'true'
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: plunk-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: plunk
+  namespace: mailnexus
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  - name: smtps
+    port: 465
+    targetPort: 465
+  - name: submission
+    port: 587
+    targetPort: 587
+  selector:
+    app.kubernetes.io/name: plunk

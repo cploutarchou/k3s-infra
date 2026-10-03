@@ -1,0 +1,25 @@
+# Credentials for the mailnexus-postgres-backup CronJob.
+#   BACKUP_PASSPHRASE: the passphrase scripts/k8s-backup.sh and
+#     scripts/k8s-restore.sh already use (mailnexus repo .env), not a new
+#     one, so existing and new backups restore the same way. Keep it in
+#     the password manager as well: it is the only key to every backup.
+#   RCLONE_CONFIG_R2_*: an R2 API token scoped to bucket mailnexus-backups
+#     (EU), Object Read & Write, under rclone's own key names.
+#   HEARTBEAT_URL: optional Uptime Kuma push monitor (heartbeat 25 h).
+# Create the encrypted file from the repository root; each value is read
+# silently:
+#
+#   ./scripts/sops-new-secret.sh clusters/prod/apps/mailnexus/mailnexus-postgres-backup.sops.yaml \
+#     mailnexus mailnexus-postgres-backup \
+#     BACKUP_PASSPHRASE RCLONE_CONFIG_R2_ACCESS_KEY_ID RCLONE_CONFIG_R2_SECRET_ACCESS_KEY 'HEARTBEAT_URL?'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mailnexus-postgres-backup
+  namespace: mailnexus
+type: Opaque
+stringData:
+  BACKUP_PASSPHRASE: '<existing backup passphrase>'
+  RCLONE_CONFIG_R2_ACCESS_KEY_ID: '<Access Key ID of the R2 token>'
+  RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: '<Secret Access Key of the R2 token>'
+  HEARTBEAT_URL: 'http://uptime-kuma.monitoring.svc/api/push/<push token>'

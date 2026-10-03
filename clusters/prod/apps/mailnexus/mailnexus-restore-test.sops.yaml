@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: mailnexus-restore-test
+    namespace: mailnexus
+type: Opaque
+stringData:
+    RCLONE_CONFIG_R2_ACCESS_KEY_ID: ENC[AES256_GCM,data:0WxUGpm3uhwKc2p7KiEiNg7dZKeubvYIw63akire4Dw=,iv:eY2khezh5DFDGo4ui1mH8jF5KqDSq1fX1O2Bt0baXhg=,tag:60LEt179NAl4O/0M5vrmrg==,type:str]
+    RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ENC[AES256_GCM,data:pba3P5v4i0RrHkbstrkYGgStOlXI5wxBaGQ9zPQxPkVc5oqNP+7vczy1MUeaKcKvhRlHpOziHqR9y5+CEGMjvA==,iv:W87lCyM1q8OdoRIBTD4j3sekE7v4P769ul50mphVD+I=,tag:dRkEIBn3F3viNJnV4HbX5g==,type:str]
+    HEARTBEAT_URL: ENC[AES256_GCM,data:bmzdvXMQC9rGN2pka3puQQ221VSGEocwhs4t+vLWldYBgO3fetL2ShuaqHvbsRyvmtpcytPMwQbcHcs4LSfKUohF1WVt00oP1vQN,iv:wapqWhfMQQ1D3ikcV3Cb+zvGCd3SJz1zZ+4mzvkNXCI=,tag:I27QgB8W9BtR47YxovKklQ==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWcGJoY1kzZGRaeXp1N1Na
+            VkxNbGdHMktPUVZoY2JoVGJDQjNpM1owRW5ZCk9aaXZ6QmNsVVBwOCtva2liNUIx
+            TzJiMmMyVGRTdDFuMElqbEFXczRwZVkKLS0tIDVrLzNnTllUa2FEWWFWeUFFckYx
+            SFJtaFYrb3QrSjI4bS93YU80V3JJMlkK4R7t1N4xLNSsfo5woNZh0AuTBK3Hfnh9
+            9oHbDTgMjA5AVnvU0O5C+y4pHd/dWk8UTe7xcax3dRE2xBxSB+cWRg==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1lm0sz9afv6fdmpqcfsrhcfvkfcw6rgga20mpplrryxwcppfd6glq959w5j
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-10-03T21:09:51Z"
+    mac: ENC[AES256_GCM,data:E4ewCH5PMcrKRZlcn2mCZMIp1rDz/wNh0oeK/fyj1XU0gE9VRdhWAracPxoH5mC1VXJOWIyUSSTWxuFpwoS9NseGyTJuAdjIzy8KsdsQzz6Gqc1L2DjUcVXmTrlN9ek2cqkd9hdFfwg1THGhGhyJ0wpiDFlSnjSINgedf0SWSPc=,iv:Rf659mGS0T9qHLdjPPIwGDaAIyDcFnFEBau1iurzblk=,tag:614+5Cad3/etf3IYiBISqQ==,type:str]
+    version: 3.13.3

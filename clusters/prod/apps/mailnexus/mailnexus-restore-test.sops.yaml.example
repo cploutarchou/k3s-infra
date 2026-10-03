@@ -1,0 +1,18 @@
+# Credentials for the mailnexus-postgres-restore-test CronJob: an R2 API
+# token scoped to bucket mailnexus-backups (EU) with Object Read only,
+# under rclone's key names, and an optional Uptime Kuma push URL
+# (heartbeat 8 days).
+#
+#   ./scripts/sops-new-secret.sh clusters/prod/apps/mailnexus/mailnexus-restore-test.sops.yaml \
+#     mailnexus mailnexus-restore-test \
+#     RCLONE_CONFIG_R2_ACCESS_KEY_ID RCLONE_CONFIG_R2_SECRET_ACCESS_KEY 'HEARTBEAT_URL?'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mailnexus-restore-test
+  namespace: mailnexus
+type: Opaque
+stringData:
+  RCLONE_CONFIG_R2_ACCESS_KEY_ID: '<Access Key ID of the read-only R2 token>'
+  RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: '<Secret Access Key of the read-only R2 token>'
+  HEARTBEAT_URL: 'http://uptime-kuma.monitoring.svc/api/push/<push token>'

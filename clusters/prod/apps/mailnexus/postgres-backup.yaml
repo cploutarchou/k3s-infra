@@ -1,0 +1,212 @@
+---
+# Daily encrypted backup of mailnexus's PostgreSQL to R2 (bucket
+# mailnexus-backups, EU jurisdiction). The artifact is the one the
+# mailnexus repo's scripts/k8s-backup.sh writes (pg_dump -Fc, openssl
+# enc -aes-256-cbc -pbkdf2 -salt with BACKUP_PASSPHRASE), stored as
+#   postgres/YYYY/MM/DD/<stamp>/{postgres.dump.enc,manifest.txt}
+# so a <stamp>/ directory copied down is restored by scripts/k8s-restore.sh
+# unchanged (docs/runbooks/mailnexus.md). Retention is the bucket's
+# lifecycle rule, not this job: nothing here deletes anything.
+#
+# Two steps share an emptyDir: pg-backup-dump.sh (postgres:16.9-bookworm,
+# the same PostgreSQL release as the server, with the openssl CLI the
+# alpine image lacks) dumps over the network and encrypts in a pipe, then
+# reads the result back; pg-backup-upload.sh (rclone) uploads it, checks
+# the stored object's size, MD5 and SHA-256, and sends the heartbeat. The
+# upload step only starts after the dump step exited 0.
+#
+# Credentials: PGPASSWORD is DB_PASSWORD from mailnexus-secrets (the
+# password in Plunk's DATABASE_URL). mailnexus-postgres-backup holds
+# BACKUP_PASSPHRASE (the operator's existing passphrase, also kept off
+# the cluster: without it no backup can be restored), the R2 token under
+# rclone's key names RCLONE_CONFIG_R2_ACCESS_KEY_ID and
+# RCLONE_CONFIG_R2_SECRET_ACCESS_KEY (Object Read & Write, scoped to
+# mailnexus-backups) and an optional Uptime Kuma push URL, HEARTBEAT_URL.
+# How to create it: mailnexus-postgres-backup.sops.yaml.example.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mailnexus-postgres-backup
+  namespace: mailnexus
+  labels:
+    app.kubernetes.io/name: mailnexus-postgres-backup
+    app.kubernetes.io/part-of: mailnexus
+spec:
+  # 03:45 UTC: clear of the CNPG base backup at 03:30
+  # (infrastructure/configs/postgres/scheduled-backup.yaml) and of the
+  # 6-hourly etcd snapshots.
+  schedule: "45 3 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # One retry for a transient R2 or network error; a retry is a new
+      # dump with a new stamp, never a rewrite of an existing key.
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: mailnexus-postgres-backup
+            app.kubernetes.io/part-of: mailnexus
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999 # postgres in the bookworm image; both steps share it
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            - name: dump
+              # Verified 2026-10-03 against Docker Hub: postgres 16.9 on Debian
+              # bookworm (pg_dump 16.9, OpenSSL 3.0.17), multi-arch index
+              # digest; built from the same docker-library commit (2c6fe8d)
+              # as the server's postgres:16.9-alpine.
+              image: postgres:16.9-bookworm@sha256:253815cf7579ffa05e1673d92e78d37273e61be0e4414e9a1449337d7925be94
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/bash", "/scripts/pg-backup-dump.sh"]
+              env:
+                - name: PGHOST
+                  value: postgres
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  value: plunk
+                - name: PGDATABASE
+                  value: plunk
+                - name: PGCONNECT_TIMEOUT
+                  value: "10"
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-secrets
+                      key: DB_PASSWORD
+                - name: BACKUP_PASSPHRASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-postgres-backup
+                      key: BACKUP_PASSPHRASE
+                - name: WORK_DIR
+                  value: /work
+                - name: HOME
+                  value: /work
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          containers:
+            - name: upload
+              # Verified 2026-10-03 against Docker Hub: rclone 1.75.1 (released
+              # 2026-09-04), multi-arch index digest; same pin as
+              # apps/polyedge/dataset-archive.yaml.
+              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "/scripts/pg-backup-upload.sh"]
+              env:
+                - name: WORK_DIR
+                  value: /work
+                - name: BACKUP_REMOTE
+                  value: r2:mailnexus-backups
+                # The r2 remote, configured from the environment (no config
+                # file). EU-jurisdiction endpoint (".eu." in the host), like
+                # the k3s-backups bucket: the plain endpoint does not serve
+                # EU buckets (docs/decisions.md).
+                - name: RCLONE_CONFIG_R2_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_R2_PROVIDER
+                  value: Cloudflare
+                - name: RCLONE_CONFIG_R2_REGION
+                  value: auto
+                - name: RCLONE_CONFIG_R2_ENDPOINT
+                  value: https://035087c37abeda0a744ab1c4c482d19f.eu.r2.cloudflarestorage.com
+                # The token is scoped to one bucket and cannot check or create
+                # buckets.
+                - name: RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+                  value: "true"
+                # Single-part uploads up to 5 GiB, so every file is sent with
+                # Content-MD5 and its ETag is the MD5 the script checks.
+                - name: RCLONE_CONFIG_R2_UPLOAD_CUTOFF
+                  value: 5Gi
+                - name: RCLONE_RETRIES
+                  value: "3"
+                - name: RCLONE_LOW_LEVEL_RETRIES
+                  value: "10"
+                - name: RCLONE_CONTIMEOUT
+                  value: 30s
+                - name: RCLONE_TIMEOUT
+                  value: 5m
+                - name: RCLONE_CONFIG
+                  value: ""
+                - name: HOME
+                  value: /tmp
+                - name: RCLONE_CACHE_DIR
+                  value: /tmp/rclone-cache
+                - name: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-postgres-backup
+                      key: RCLONE_CONFIG_R2_ACCESS_KEY_ID
+                - name: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-postgres-backup
+                      key: RCLONE_CONFIG_R2_SECRET_ACCESS_KEY
+                - name: HEARTBEAT_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: mailnexus-postgres-backup
+                      key: HEARTBEAT_URL
+                      optional: true
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                  readOnly: true
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          volumes:
+            # Holds only the encrypted dump and its manifest.
+            - name: work
+              emptyDir:
+                sizeLimit: 1Gi
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+            - name: scripts
+              configMap:
+                name: mailnexus-postgres-backup
+                defaultMode: 0444

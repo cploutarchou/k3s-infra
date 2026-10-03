@@ -1,0 +1,14 @@
+---
+# MailNexus: self-hosted Plunk (transactional email) on Amazon SES, with
+# ntfy, PostgreSQL and Redis. Never pruned by Flux: deleting the namespace
+# would delete the data volumes with it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+    pod-security.kubernetes.io/enforce: baseline
+  name: mailnexus
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

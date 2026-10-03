@@ -1,0 +1,68 @@
+---
+# Ingress is denied by default; Traefik may reach Plunk, and only Plunk may
+# reach the datastores. The backup job's access to PostgreSQL is in
+# postgres-backup-networkpolicy.yaml. Enforced by k3s's network policy
+# controller.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: default-deny-ingress
+  namespace: mailnexus
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: allow-plunk-from-ingress
+  namespace: mailnexus
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: traefik
+    ports:
+    - port: 80
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: plunk
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: allow-datastores-from-plunk
+  namespace: mailnexus
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: plunk
+    ports:
+    - port: 5432
+    - port: 6379
+    - port: 80
+  podSelector:
+    matchExpressions:
+    - key: app.kubernetes.io/name
+      operator: In
+      values:
+      - postgres
+      - redis
+      - ntfy
+  policyTypes:
+  - Ingress

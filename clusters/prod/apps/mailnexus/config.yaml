@@ -1,0 +1,43 @@
+---
+# Plunk's non-secret settings, read as environment variables at startup
+# (bump mailnexus.io/config-revision in plunk.yaml after a change).
+# Email-editor images go to the R2 bucket mailnexus-uploads (default
+# jurisdiction) and are served from its custom domain uploads.cpdevlab.com.
+# S3_PUBLIC_URL is written into every template and sent email, so it must
+# never change. Plunk's start-up PutBucketPolicy call is not implemented by
+# R2 and only logs a warning; the bucket is public through the custom
+# domain instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: mailnexus-config
+  namespace: mailnexus
+data:
+  API_DOMAIN: api.cpdevlab.com
+  AUTO_PROJECT_DISABLE: 'false'
+  AWS_SES_REGION: eu-central-1
+  DASHBOARD_DOMAIN: app.cpdevlab.com
+  DISABLE_SIGNUPS: 'true'
+  EMAIL_WORKER_MAX_CONCURRENCY: '50'
+  LANDING_DOMAIN: www.cpdevlab.com
+  MAX_ATTACHMENT_SIZE_MB: '10'
+  MAX_ATTACHMENTS_COUNT: '10'
+  MAX_RECIPIENTS: '5'
+  NODE_ENV: production
+  NTFY_URL: http://ntfy:80/plunk-notifications
+  PORT: '8080'
+  RATE_LIMIT_ENABLED: 'true'
+  REDIS_URL: redis://redis:6379/0
+  S3_BUCKET: mailnexus-uploads
+  S3_ENDPOINT: https://035087c37abeda0a744ab1c4c482d19f.r2.cloudflarestorage.com
+  S3_FORCE_PATH_STYLE: 'true'
+  S3_PUBLIC_URL: https://uploads.cpdevlab.com
+  SERVICE: all
+  SES_CONFIGURATION_SET: mailnexus-tracked
+  SES_CONFIGURATION_SET_NO_TRACKING: mailnexus-untracked
+  SMTP_DOMAIN: localhost
+  USE_HTTPS: 'true'
+  WIKI_DOMAIN: docs.cpdevlab.com

@@ -1,0 +1,90 @@
+---
+# PostgreSQL 16 for Plunk. Backed up daily to R2 by postgres-backup.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: postgres
+  namespace: mailnexus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_USER
+          value: plunk
+        - name: POSTGRES_DB
+          value: plunk
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: DB_PASSWORD
+              name: mailnexus-secrets
+        image: postgres:16.9-alpine
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - plunk
+            - -d
+            - plunk
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        name: postgres
+        ports:
+        - containerPort: 5432
+          name: pg
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - plunk
+            - -d
+            - plunk
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      nodeSelector:
+        mailnexus.io/data: 'true'
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: mailnexus
+  name: postgres
+  namespace: mailnexus
+spec:
+  clusterIP: None
+  ports:
+  - name: pg
+    port: 5432
+    targetPort: pg
+  selector:
+    app.kubernetes.io/name: postgres
