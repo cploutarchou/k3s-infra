@@ -117,9 +117,14 @@ kubectl -n polyedge exec deploy/polyedge -- polyedged estop on --reason "..."
 
 ## Datasets and archiving
 
-About 2.1 GB a day (measured 2026-10-01), so 100Gi lasts roughly 45 days.
-Watch the volume in Grafana (`kubelet_volume_stats_used_bytes`, namespace
-`polyedge`).
+About 1.6-2.1 GB a day. local-path does not enforce the 100Gi request: the
+datasets share k3s-03's root filesystem with the CNPG replica postgres-2,
+and at about 2 GB a day it reaches the kubelet's image-GC threshold (85%
+used) around mid-December 2026 and hard eviction (5% free) around the turn
+of the year. Watch k3s-03's root filesystem in Grafana
+(`node_filesystem_avail_bytes`, node-exporter); the `kubelet_volume_stats_*`
+series report the whole node filesystem for local-path volumes, not the
+datasets.
 
 The `polyedge-dataset-archive` CronJob (`dataset-archive.yaml`, logic in
 `dataset-archive.sh`) copies datasets to R2 bucket `polyedge-datasets`
@@ -139,8 +144,12 @@ Before uploading a segment it checks the SHA-256 against the manifest and
 refuses on a mismatch; each upload is a single-part PUT with Content-MD5,
 verified by R2 and again by rclone. A segment that was never closed (a
 crash) is archived as found and logged `unverified`. It never deletes
-anything, locally or in the bucket: **pruning local copies is not set up**,
-pending a retention decision, so the 45-day ceiling still applies.
+anything, locally or in the bucket: **pruning local copies is not set up
+yet**, so k3s-03's disk keeps filling (see above). A run that finds no
+datasets at all fails as an error (empty or unmounted volume). The datasets
+volume, like every data volume here, carries
+`kustomize.toolkit.fluxcd.io/prune: disabled`, so removing it from Git
+never deletes the data.
 
 Credentials: `polyedge-r2-credentials.sops.yaml`, an R2 token scoped to the
 bucket (Object Read & Write) under rclone's key names. Create it from the

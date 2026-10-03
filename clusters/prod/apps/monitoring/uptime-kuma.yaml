@@ -6,6 +6,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: uptime-kuma-data
   namespace: monitoring
+  annotations:
+    # Never pruned by Flux: local-path deletes the data with the claim.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: local-path

@@ -9,6 +9,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: gvasiliourolex-media
   namespace: gvasiliourolex
+  annotations:
+    # Never pruned by Flux: local-path deletes the data with the claim.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteOnce

@@ -159,6 +159,13 @@ for dir in "$ROOT"/*/; do
   fi
 done
 
+# polyedge records from its first start, so an empty directory means the
+# wrong or an unmounted volume, not a clean run.
+if [ "$datasets" -eq 0 ]; then
+  log "ERROR no datasets under $ROOT (empty or unmounted volume?)"
+  errors=$((errors + 1))
+fi
+
 log "summary datasets=$datasets finished=$finished_n uploaded=$uploaded bytes=$bytes already_archived=$present unverified=$unverified partials=$partials errors=$errors"
 [ "$errors" -eq 0 ] || exit 1
 
