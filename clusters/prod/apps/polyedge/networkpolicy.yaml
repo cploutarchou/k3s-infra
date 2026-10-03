@@ -80,3 +80,57 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+---
+# The dataset archiver (dataset-archive.yaml) accepts no connections and
+# reaches only cluster DNS, R2 over HTTPS (public addresses, port 443) and
+# Uptime Kuma's push endpoint for its heartbeat (pod port 3001; the Service
+# listens on 80).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: polyedge-dataset-archive
+  namespace: polyedge
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: polyedge-dataset-archive
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+              - fe80::/10
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: uptime-kuma
+      ports:
+        - protocol: TCP
+          port: 3001

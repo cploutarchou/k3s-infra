@@ -2,8 +2,9 @@
 # Recorded market data (append-only, checksummed datasets; about 2.1 GB a
 # day measured on 2026-10-01). Same trade-off as signwise: local-path pins
 # the pod to one node, so losing that node stops polyedge until it returns.
-# 100Gi holds roughly 45 days until datasets are archived to R2
-# (polyedge-datasets bucket) and pruned locally.
+# 100Gi holds roughly 45 days. Datasets are archived hourly to R2
+# (polyedge-datasets, dataset-archive.yaml); local pruning is not set up,
+# so the 45-day ceiling still applies until a retention period is chosen.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

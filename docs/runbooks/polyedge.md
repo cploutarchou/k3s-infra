@@ -101,6 +101,10 @@ dataset starts.
 - Master key: follow the app's key-rotation procedure
   (`POLYEDGE_MASTER_KEY_PREVIOUS`); never just replace it, or vault records
   become unreadable.
+- R2 token (dataset archiver): create the new token, edit
+  `polyedge-r2-credentials.sops.yaml` with `sops`, and revoke the old token
+  after the next run's summary shows `errors=0`. Each run starts a new
+  pod, so nothing needs a restart.
 
 ## Emergency stop
 
@@ -114,11 +118,77 @@ kubectl -n polyedge exec deploy/polyedge -- polyedged estop on --reason "..."
 ## Datasets and archiving
 
 About 2.1 GB a day (measured 2026-10-01), so 100Gi lasts roughly 45 days.
-Archive bucket: R2 `polyedge-datasets` (default jurisdiction). The
-archiver CronJob is not deployed yet: it needs an R2 API token scoped to
-that bucket (Object Read & Write), created in the Cloudflare dashboard and
-added as a SOPS secret. Until then watch the volume in Grafana
-(`kubelet_volume_stats_used_bytes`, namespace `polyedge`).
+Watch the volume in Grafana (`kubelet_volume_stats_used_bytes`, namespace
+`polyedge`).
+
+The `polyedge-dataset-archive` CronJob (`dataset-archive.yaml`, logic in
+`dataset-archive.sh`) copies datasets to R2 bucket `polyedge-datasets`
+(default jurisdiction, location hint ENAM) at minute 17 of every hour:
+
+- every closed segment, at the first run after it closes (the app rotates
+  segments hourly), so the archive trails recording by up to about 2 h;
+- a dataset's `manifest.json` once the dataset is finished (its manifest
+  unchanged for 3 h; a new dataset starts with every pod start) and every
+  segment of it is archived. An archived `manifest.json` marks a complete
+  dataset;
+- until then, a copy of the dataset's current manifest as
+  `manifest.partial.json`, so an unfinished dataset can still be restored
+  and checked (see Restore below).
+
+Before uploading a segment it checks the SHA-256 against the manifest and
+refuses on a mismatch; each upload is a single-part PUT with Content-MD5,
+verified by R2 and again by rclone. A segment that was never closed (a
+crash) is archived as found and logged `unverified`. It never deletes
+anything, locally or in the bucket: **pruning local copies is not set up**,
+pending a retention decision, so the 45-day ceiling still applies.
+
+Credentials: `polyedge-r2-credentials.sops.yaml`, an R2 token scoped to the
+bucket (Object Read & Write) under rclone's key names. Create it from the
+repository root with the helper, which reads each value silently; never
+paste a value anywhere:
+
+```sh
+./scripts/sops-new-secret.sh clusters/prod/apps/polyedge/polyedge-r2-credentials.sops.yaml \
+  polyedge polyedge-r2-credentials \
+  RCLONE_CONFIG_R2_ACCESS_KEY_ID RCLONE_CONFIG_R2_SECRET_ACCESS_KEY 'HEARTBEAT_URL?'
+```
+
+Other key names (such as the postgres backup secret's `ACCESS_KEY_ID`)
+leave rclone anonymous, and every run fails at `cannot list`. The helper
+refuses an existing file: rotate the token, or add `HEARTBEAT_URL` later,
+with `sops clusters/prod/apps/polyedge/polyedge-r2-credentials.sops.yaml`.
+`kustomization.yaml` lists the file, so it has to be committed together
+with the CronJob: without it the whole `apps` Kustomization stops building
+(`./scripts/validate.sh` fails first).
+
+- **Did it run?** `kubectl -n polyedge get jobs -l app.kubernetes.io/name=polyedge-dataset-archive`,
+  then `kubectl -n polyedge logs job/<name>`: the last line is
+  `summary datasets=… uploaded=… partials=… errors=…`. A failed Job is
+  kept for up to 7 days, but only the last three failed Jobs are kept, so
+  after a few hours of failures the first failure's logs are gone.
+- **Alerting:** set `HEARTBEAT_URL` in the secret to an Uptime Kuma push
+  monitor (`http://uptime-kuma.monitoring.svc/api/push/<token>`, heartbeat
+  interval 2 h). Only a clean run pushes, so a failing or missing archiver
+  alerts. Without it, nothing alerts.
+- **`ERROR … differs from the manifest`:** the local segment no longer
+  matches the hash it was closed with (disk corruption). It is not
+  uploaded; any earlier archived copy is the good one. Investigate the
+  node's disk before anything else.
+- **`ERROR … archived copy is N bytes … left as is`:** an unverified
+  segment differs from its archived copy and nothing says which is right.
+  Compare both by hand; delete the wrong object from the bucket only after
+  that.
+- **Restore:** copy `<dataset-id>/` from the bucket into
+  `/var/lib/polyedge/datasets/` (or into `$POLYEDGE_DATA_DIR/datasets/` on
+  a workstation) and run `polyedged dataset verify <dataset-id>`, then
+  backtest as usual. If the bucket holds `manifest.partial.json` but no
+  `manifest.json` (the dataset was still recording, or finished less than
+  about 4 h before), rename it to `manifest.json` first. Every closed
+  segment it lists is still checked against its SHA-256 (`checksums
+  verified` in the output); the newest segment or two were not archived
+  yet. If both files are there, use `manifest.json`. Verify reads the
+  segments that are present and skips missing ones silently, so compare
+  `segments` in its output with the segments the manifest lists.
 
 ## Cloudflare ranges
 

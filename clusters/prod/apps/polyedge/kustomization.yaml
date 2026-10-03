@@ -7,9 +7,18 @@ resources:
   - polyedge-db-credentials.sops.yaml
   - polyedge-secret.sops.yaml
   - ghcr-pull-secret.sops.yaml
+  - polyedge-r2-credentials.sops.yaml
   - config.yaml
   - datasets-pvc.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
   - networkpolicy.yaml
+  - dataset-archive.yaml
+configMapGenerator:
+  # The archiver's script; the hash suffix rolls the CronJob onto a new
+  # ConfigMap whenever the script changes.
+  - name: polyedge-dataset-archive
+    namespace: polyedge
+    files:
+      - dataset-archive.sh

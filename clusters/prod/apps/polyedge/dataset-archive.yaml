@@ -1,0 +1,140 @@
+---
+# Archives polyedge's recorded datasets to R2 (bucket polyedge-datasets,
+# default jurisdiction) every hour: each closed segment once it is closed,
+# a dataset's manifest once the dataset is finished, and until then a copy
+# of it as manifest.partial.json. Archive only: nothing is deleted, locally
+# or in the bucket; pruning local copies is a separate change once a
+# retention period is chosen (docs/runbooks/polyedge.md). The logic is in
+# dataset-archive.sh.
+#
+# The datasets volume is local-path ReadWriteOnce, so the PV's node
+# affinity places this pod on polyedge's node, where it mounts the volume
+# read-only next to the running app. It runs as the app's uid because the
+# segments are 0600. Credentials: polyedge-r2-credentials, under rclone's
+# key names RCLONE_CONFIG_R2_ACCESS_KEY_ID and
+# RCLONE_CONFIG_R2_SECRET_ACCESS_KEY (an R2 token scoped to this bucket,
+# Object Read & Write), and an optional Uptime Kuma push URL,
+# HEARTBEAT_URL, sent after every clean run. How to create it:
+# polyedge-r2-credentials.sops.yaml.example.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: polyedge-dataset-archive
+  namespace: polyedge
+  labels:
+    app.kubernetes.io/name: polyedge-dataset-archive
+spec:
+  schedule: "17 * * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  # A run that cannot start within the hour is dropped; the next one
+  # catches up, since every run archives whatever is missing.
+  startingDeadlineSeconds: 1800
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # No retries inside a run: the next hourly run is the retry, and a
+      # failed Job stays visible until then.
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 604800
+      # The first run uploads the backlog; later runs take seconds.
+      activeDeadlineSeconds: 10800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: polyedge-dataset-archive
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532 # owner of the dataset files (polyedge's distroless nonroot)
+            runAsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: archive
+              # Verified 2026-10-03 against Docker Hub: rclone 1.75.1 (released
+              # 2026-09-04), multi-arch index digest.
+              image: rclone/rclone:1.75.1@sha256:45401ad7410db1d67ffdb58e19059ad20b0d8e0285a60e38bbec55cc1019c7a5
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "/scripts/dataset-archive.sh"]
+              env:
+                - name: DATASETS_DIR
+                  value: /var/lib/polyedge/datasets
+                - name: ARCHIVE_REMOTE
+                  value: r2:polyedge-datasets
+                - name: STALE_MINUTES
+                  value: "180"
+                # The r2 remote, configured from the environment (no config
+                # file). Default-jurisdiction endpoint: no ".eu." in the host,
+                # unlike the k3s-backups bucket.
+                - name: RCLONE_CONFIG_R2_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_R2_PROVIDER
+                  value: Cloudflare
+                - name: RCLONE_CONFIG_R2_REGION
+                  value: auto
+                - name: RCLONE_CONFIG_R2_ENDPOINT
+                  value: https://035087c37abeda0a744ab1c4c482d19f.r2.cloudflarestorage.com
+                # The token is scoped to one bucket and cannot check or create
+                # buckets.
+                - name: RCLONE_CONFIG_R2_NO_CHECK_BUCKET
+                  value: "true"
+                # Single-part uploads up to 5 GiB, so every segment is sent
+                # with Content-MD5 and its ETag is the MD5 rclone checks.
+                - name: RCLONE_CONFIG_R2_UPLOAD_CUTOFF
+                  value: 5Gi
+                - name: RCLONE_RETRIES
+                  value: "3"
+                - name: RCLONE_LOW_LEVEL_RETRIES
+                  value: "10"
+                - name: RCLONE_CONTIMEOUT
+                  value: 30s
+                - name: RCLONE_TIMEOUT
+                  value: 5m
+                # Remotes come from the environment only; an empty RCLONE_CONFIG
+                # keeps rclone from looking for a config file.
+                - name: RCLONE_CONFIG
+                  value: ""
+                - name: HOME
+                  value: /tmp
+                - name: RCLONE_CACHE_DIR
+                  value: /tmp/rclone-cache
+              envFrom:
+                - secretRef:
+                    name: polyedge-r2-credentials
+              volumeMounts:
+                - name: datasets
+                  mountPath: /var/lib/polyedge
+                  readOnly: true
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          volumes:
+            - name: datasets
+              persistentVolumeClaim:
+                claimName: polyedge-datasets
+                readOnly: true
+            - name: script
+              configMap:
+                name: polyedge-dataset-archive
+                defaultMode: 0444
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
