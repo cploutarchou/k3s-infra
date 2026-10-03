@@ -29,6 +29,15 @@ fail() {
 [ -n "${BACKUP_PASSPHRASE:-}" ] || { log "ERROR BACKUP_PASSPHRASE is not set"; exit 2; }
 [ -n "${PGPASSWORD:-}" ] || { log "ERROR PGPASSWORD is not set"; exit 2; }
 
+# k3s's network policy controller adds a new pod's IP to PostgreSQL's
+# ingress policy a moment after the pod starts; until then the connection
+# is refused. Wait for the server instead of failing the run.
+for attempt in $(seq 1 30); do
+  pg_isready -q -t 3 && break
+  [ "$attempt" -lt 30 ] || fail "PostgreSQL at $PGHOST:${PGPORT:-5432} not reachable after 90 s"
+  sleep 3
+done
+
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 server=$(psql -XAtq -c 'SHOW server_version') || fail "cannot connect to $PGUSER@$PGHOST/$PGDATABASE"
 live_tables=$(psql -XAtq -c "SELECT count(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')") ||
@@ -43,9 +52,10 @@ pg_dump --no-password --lock-wait-timeout=120s -Fc |
 [ -s "$OUT" ] || fail "encrypted dump is empty"
 
 # Round trip: decrypt in a pipe, read the whole archive back as SQL (every
-# data block decompressed), and count the tables it would create.
+# data block decompressed), and count the tables it would create. grep -c
+# exits 1 on a count of 0; only openssl or pg_restore failing is an error.
 dumped_tables=$(openssl enc -d "${ENC[@]}" -pass env:BACKUP_PASSPHRASE -in "$OUT" |
-  pg_restore -f - | grep -c -E '^CREATE (UNLOGGED )?TABLE ') ||
+  pg_restore -f - | { grep -c -E '^CREATE (UNLOGGED )?TABLE ' || true; }) ||
   fail "the encrypted dump does not decrypt and read back"
 [ "$dumped_tables" = "$live_tables" ] ||
   fail "the dump creates $dumped_tables tables, the database has $live_tables"
